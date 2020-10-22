@@ -1,0 +1,3 @@
+enum class Error {
+    NO_SUCH_FIELD, CONFIG_FAIL, NO_SUCH_FOLDER, UNKNOWN
+};
