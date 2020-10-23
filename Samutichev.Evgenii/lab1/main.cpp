@@ -1,3 +1,9 @@
+#include "ConfigReader.h"
+#include "Error.h"
+#include "FolderWorker.h"
+#include <iostream>
+#include <dirent.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -6,11 +12,20 @@
 #include <unistd.h>
 #include <syslog.h>
 
-void sig_handler(int signum) {
-    printf("Received signal %d\n", signum);
-}
-
 int main() {
+    std::string folder1Path, folder2Path;
+    size_t updateTime, oldDefTime;
+    try {
+        ConfigReader reader("config.txt");
+        folder1Path = reader.getFolder1Path();
+        folder2Path = reader.getFolder2Path();
+        updateTime = reader.getUpdateTime();
+        oldDefTime = reader.getOldDefTime();
+    }
+    catch (Error error) {
+        return EXIT_FAILURE;
+    }
+
     pid_t pid;
 
     // Fork parent process
@@ -25,9 +40,9 @@ int main() {
     if (setsid() < 0)
         exit(EXIT_FAILURE);
 
-    signal(SIGINT, sig_handler);
     signal(SIGCHLD, SIG_IGN);
     signal(SIGHUP, SIG_IGN);
+    signal(SIGTERM, SIG_IGN);
 
     pid = fork();
     if (pid < 0)
@@ -48,14 +63,23 @@ int main() {
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
 
-    FILE* f = fopen("daemon.txt", "w+");
-    int i = 0;
+    openlog("lab1_log", LOG_PID, LOG_DAEMON);
+    syslog(LOG_NOTICE, "Daemon started");
+
+    FolderWorker folderWorker(folder1Path, folder2Path, oldDefTime);
+
     while(1) {
-        fprintf(f, "%d", i);
-        i++;
-        sleep(10);
-        fflush(f);
+        try {
+            folderWorker.work();
+        }
+        catch (Error error) {
+            closelog();
+            exit(EXIT_FAILURE);
+        }
+        sleep(updateTime);
     }
-    fclose(f);
+
+    syslog(LOG_NOTICE, "Daemon terminated");
+    closelog();
     return EXIT_SUCCESS;
 }

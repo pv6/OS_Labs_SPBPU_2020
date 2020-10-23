@@ -3,6 +3,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <syslog.h>
+#include <stdlib.h>
 
 FolderWorker::FolderWorker(const std::string& folder1Path, const std::string& folder2Path, size_t oldDefTime) {
     _folder1Path = folder1Path;
@@ -13,27 +14,49 @@ FolderWorker::FolderWorker(const std::string& folder1Path, const std::string& fo
 void FolderWorker::work() {
     DIR* dir1 = opendir(_folder1Path.c_str());
     if (!dir1) {
-        /*struct dirent *ent;
-            while ((ent = readdir (dir)) != NULL)
-                std::cout << ent->d_name << "\n";
-            closedir(dir);
-            std::cout << "OK";*/
         if (ENOENT == errno)
             throw Error::NO_SUCH_FOLDER;
         else
             throw Error::UNKNOWN;
     }
 
-    syslog(LOG_NOTICE, "Folder 1 succesfuly opened");
+    if (!dirExists(_folder2Path.c_str())) {
+        closedir(dir1);
+        std::string msg = "Folder " + _folder2Path + " doesn't exists";
+        syslog(LOG_WARNING, msg.c_str());
+        throw Error::NO_SUCH_FOLDER;
+    }
 
-    DIR* dir2 = opendir(_folder2Path.c_str());
-    if (!dir2) {
-        if (ENOENT == errno) {
-            throw Error::NO_SUCH_FOLDER;
-        }
+    std::string folderNEWPath = _folder2Path + "/NEW";
+    std::string folderOLDPath = _folder2Path + "/OLD";
+
+    if (!dirExists(folderNEWPath)) {
+        syslog(LOG_NOTICE, "NEW folder was created");
+        system(("mkdir " + folderNEWPath).c_str());
+    }
+
+    if (!dirExists(folderOLDPath)) {
+        syslog(LOG_NOTICE, "OLD folder was created");
+        system(("mkdir " + folderOLDPath).c_str());
+    }
+
+    struct dirent* ent;
+    while ((ent = readdir(dir1)) != NULL) {
+        std::string file = _folder1Path + "/" + ent->d_name;
+        system(("cp " + file + " " + folderNEWPath).c_str());
+    }
+}
+
+bool FolderWorker::dirExists(const std::string& folderPath) const {
+    DIR* dir = opendir(folderPath.c_str());
+    if (!dir) {
+        if (ENOENT == errno)
+            return false;
         else
             throw Error::UNKNOWN;
     }
 
-    syslog(LOG_NOTICE, "Folder 2 succesfuly opened");
+    closedir(dir);
+
+    return true;
 }

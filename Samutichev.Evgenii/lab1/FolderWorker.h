@@ -14,6 +14,8 @@ private:
     std::string _folder2Path;
     size_t _updateTime;
     size_t _oldDefTime;
+
+    bool dirExists(const std::string& folderPath) const;
 };
 
 #endif // FOLDERWORKER_H_INCLUDED
