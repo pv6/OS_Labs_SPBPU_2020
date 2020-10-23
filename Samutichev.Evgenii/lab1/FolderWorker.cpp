@@ -15,6 +15,12 @@ FolderWorker::FolderWorker(const std::string& folder1Path, const std::string& fo
     _oldDefTime = oldDefTime;
 }
 
+void FolderWorker::setConfiguration(const std::string& folder1Path, const std::string& folder2Path, size_t oldDefTime) {
+    _folder1Path = folder1Path;
+    _folder2Path = folder2Path;
+    _oldDefTime = oldDefTime;
+}
+
 void FolderWorker::work() {
     DIR* dir1 = opendir(_folder1Path.c_str());
     if (!dir1) {

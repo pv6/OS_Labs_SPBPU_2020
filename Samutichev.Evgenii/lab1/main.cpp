@@ -12,6 +12,38 @@
 #include <unistd.h>
 #include <syslog.h>
 
+FolderWorker* g_folderWorker = nullptr;
+bool g_stopped = false;
+std::string g_configFilePath;
+size_t g_updateTime;
+
+void handleSIGTERM(int signum) {
+    g_stopped = true;
+}
+
+void handleSIGHUP(int signum) {
+    if (g_folderWorker == nullptr)
+    	return;
+    	
+    std::string folder1Path, folder2Path;
+    size_t oldDefTime, updateTime;
+    
+    try {
+    	ConfigReader reader(g_configFilePath);
+    	folder1Path = reader.getFolder1Path();
+    	folder2Path = reader.getFolder2Path();
+    	oldDefTime = reader.getOldDefTime();
+    	updateTime = reader.getUpdateTime();
+    } catch (Error error) {
+    	syslog(LOG_WARNING, "Exception occured while reading configuration file, daemon will work with previous configuration");
+    	return;
+    }
+    
+    syslog(LOG_NOTICE, "New configuration was uploaded from [%s]", g_configFilePath.c_str());
+    g_updateTime = updateTime;
+    g_folderWorker->setConfiguration(folder1Path, folder2Path, oldDefTime);
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         std::cout << "You should specify configuration file\n";
@@ -21,13 +53,22 @@ int main(int argc, char* argv[]) {
     openlog("lab1_log", LOG_PID, LOG_DAEMON);
 
     std::string folder1Path, folder2Path;
-    size_t updateTime, oldDefTime;
+    size_t oldDefTime;
+    g_configFilePath = argv[1];
+    char* buff = realpath(g_configFilePath.c_str(), NULL);
+    
+    if (buff != NULL) {
+    	g_configFilePath = buff;
+    	free(buff);
+    }
+    
     try {
-        ConfigReader reader(argv[1]);
+        ConfigReader reader(g_configFilePath);
         folder1Path = reader.getFolder1Path();
         folder2Path = reader.getFolder2Path();
-        updateTime = reader.getUpdateTime();
         oldDefTime = reader.getOldDefTime();
+        
+        g_updateTime = reader.getUpdateTime();
     }
     catch (Error error) {
         std::cout << "An unhandling exception occured while reading configuration file, error code " << (size_t)error << ", check syslog for details\n";
@@ -50,8 +91,8 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
 
     signal(SIGCHLD, SIG_IGN);
-    signal(SIGHUP, SIG_IGN);
-    signal(SIGTERM, SIG_IGN);
+    signal(SIGHUP, handleSIGHUP);
+    signal(SIGTERM, handleSIGTERM);
 
     pid = fork();
     if (pid < 0)
@@ -70,21 +111,34 @@ int main(int argc, char* argv[]) {
 
     syslog(LOG_NOTICE, "Daemon started");
 
-    FolderWorker folderWorker(folder1Path, folder2Path, oldDefTime);
+    g_folderWorker = new FolderWorker(folder1Path, folder2Path, oldDefTime);
+    if (g_folderWorker == nullptr) {
+    	syslog(LOG_ERR, "Failed to allocate memory for g_folderWorker for some reason");
+    	closelog();
+    	return EXIT_FAILURE;
+    }
 
     while(1) {
+    	if (g_stopped)
+    	    break;
+    	    
         try {
-            folderWorker.work();
-        }
-        catch (Error error) {
-            syslog(LOG_NOTICE, "Daemon terminated");
+            g_folderWorker->work();
+        } catch (Error error) {
+            syslog(LOG_NOTICE, "Daemon terminated with an error, code %zu", (size_t)error);
+            
             closelog();
-            exit(EXIT_FAILURE);
-        }
-        sleep(updateTime);
+            
+            delete g_folderWorker;
+            
+            return EXIT_FAILURE;
+   	}
+        
+        sleep(g_updateTime);
     }
 
     syslog(LOG_NOTICE, "Daemon terminated");
     closelog();
+    delete g_folderWorker;
     return EXIT_SUCCESS;
 }

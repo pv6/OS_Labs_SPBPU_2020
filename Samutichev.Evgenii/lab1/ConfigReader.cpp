@@ -10,8 +10,10 @@ ConfigReader::ConfigReader(const std::string& configFilePath) {
     bool fieldIsParsed[numOfFields] = { false, false, false, false };
 
     std::ifstream configFile(configFilePath);
-    if (!configFile.is_open())
+    if (!configFile.is_open()) {
+    	syslog(LOG_ERR, "Can't find configuration file [%s]", configFilePath.c_str());
         throw Error::NO_CONFIG_FILE;
+    }
     std::string line;
     size_t counter = 0;
     while (std::getline(configFile, line) && (counter != numOfFields)) {
@@ -23,13 +25,13 @@ ConfigReader::ConfigReader(const std::string& configFilePath) {
             field = strToField(token);
         }
         catch (Error error) {
-            syslog(LOG_ERR, "Failed to parse configuration file, unexpected field %s", token.c_str());
+            syslog(LOG_ERR, "Failed to parse configuration file [%s], unexpected field %s", configFilePath.c_str(), token.c_str());
             throw Error::CONFIG_FAIL;
         }
 
         // Value of this field is already given
         if (fieldIsParsed[(size_t)field]) {
-            syslog(LOG_ERR, "Multiple definition for %s was found", token.c_str());
+            syslog(LOG_ERR, "In configuration file [%s] multiple definition for %s was found", configFilePath.c_str(), token.c_str());
             throw Error::CONFIG_FAIL;
         }
 
@@ -40,7 +42,7 @@ ConfigReader::ConfigReader(const std::string& configFilePath) {
 
     for (size_t i = 0; i < numOfFields; i++)
         if (!fieldIsParsed[i]) {
-            syslog(LOG_ERR, "Value of %s wasn't set properly, don't forget that the format is <FIELD>=<FIELD_VALUE>", fieldNames[i].c_str());
+            syslog(LOG_ERR, "In confiruration file [%s] value of %s wasn't set properly, don't forget that the format is <FIELD>=<FIELD_VALUE>", configFilePath.c_str(), fieldNames[i].c_str());
             throw Error::CONFIG_FAIL;
         }
 }

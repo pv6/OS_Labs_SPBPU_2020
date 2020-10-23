@@ -7,6 +7,7 @@ class FolderWorker {
 public:
     FolderWorker(const std::string& folder1Path, const std::string& folder2Path, size_t oldDefTime);
 
+    void setConfiguration(const std::string& folder1Path, const std::string& folder2Path, size_t oldDefTime);
     void work();
 
 private:
