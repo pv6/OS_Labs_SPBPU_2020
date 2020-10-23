@@ -55,7 +55,6 @@ void FolderWorker::work() {
         std::string file = _folder1Path + "/" + ent->d_name;
         stat(file.c_str(), &buff);
         long long fileAge = tv.tv_sec - (long long)buff.st_mtim.tv_sec;
-        syslog(LOG_NOTICE, "%s file %lld", file.c_str(), fileAge);
         if (fileAge > (long long)_oldDefTime)
             system(("cp " + file + " " + folderOLDPath).c_str());
         else

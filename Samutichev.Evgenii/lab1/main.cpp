@@ -12,20 +12,25 @@
 #include <unistd.h>
 #include <syslog.h>
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cout << "You should specify configuration file\n";
+        return EXIT_FAILURE;
+    }
+
     openlog("lab1_log", LOG_PID, LOG_DAEMON);
 
     std::string folder1Path, folder2Path;
     size_t updateTime, oldDefTime;
     try {
-        ConfigReader reader("config.txt");
+        ConfigReader reader(argv[1]);
         folder1Path = reader.getFolder1Path();
         folder2Path = reader.getFolder2Path();
         updateTime = reader.getUpdateTime();
         oldDefTime = reader.getOldDefTime();
     }
     catch (Error error) {
-        syslog(LOG_ERR, "Failed on reading configuration file, error code %zu", (size_t)error);
+        std::cout << "An unhandling exception occured while reading configuration file, error code " << (size_t)error << ", check syslog for details\n";
         closelog();
         return EXIT_FAILURE;
     }
@@ -58,10 +63,6 @@ int main() {
     // Change the file mode mask
     umask(0);
 
-    // Change the current working directory
-    if ((chdir("/home/evgenii/Desktop/OS_Labs_SPBPU_2020/Samutichev.Evgenii/lab1/bin/Release")) < 0)
-        exit(EXIT_FAILURE);
-
     // Close standard file descriptors
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
@@ -76,6 +77,7 @@ int main() {
             folderWorker.work();
         }
         catch (Error error) {
+            syslog(LOG_NOTICE, "Daemon terminated");
             closelog();
             exit(EXIT_FAILURE);
         }
