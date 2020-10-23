@@ -9,6 +9,8 @@ ConfigReader::ConfigReader(const std::string& configFilePath) {
     bool fieldIsParsed[numOfFields] = { false, false, false, false };
 
     std::ifstream configFile(configFilePath);
+    if (!configFile.is_open())
+        throw Error::NO_CONFIG_FILE;
     std::string line;
     size_t counter = 0;
     while (std::getline(configFile, line) && (counter != numOfFields)) {

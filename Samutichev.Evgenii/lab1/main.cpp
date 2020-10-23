@@ -13,6 +13,8 @@
 #include <syslog.h>
 
 int main() {
+    openlog("lab1_log", LOG_PID, LOG_DAEMON);
+
     std::string folder1Path, folder2Path;
     size_t updateTime, oldDefTime;
     try {
@@ -23,6 +25,8 @@ int main() {
         oldDefTime = reader.getOldDefTime();
     }
     catch (Error error) {
+        syslog(LOG_ERR, "Failed on reading configuration file, error code %zu", (size_t)error);
+        closelog();
         return EXIT_FAILURE;
     }
 
@@ -63,7 +67,6 @@ int main() {
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
 
-    openlog("lab1_log", LOG_PID, LOG_DAEMON);
     syslog(LOG_NOTICE, "Daemon started");
 
     FolderWorker folderWorker(folder1Path, folder2Path, oldDefTime);

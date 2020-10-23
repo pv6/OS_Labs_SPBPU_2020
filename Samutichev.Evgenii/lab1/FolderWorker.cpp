@@ -4,6 +4,10 @@
 #include <errno.h>
 #include <syslog.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 FolderWorker::FolderWorker(const std::string& folder1Path, const std::string& folder2Path, size_t oldDefTime) {
     _folder1Path = folder1Path;
@@ -14,8 +18,11 @@ FolderWorker::FolderWorker(const std::string& folder1Path, const std::string& fo
 void FolderWorker::work() {
     DIR* dir1 = opendir(_folder1Path.c_str());
     if (!dir1) {
-        if (ENOENT == errno)
+        if (ENOENT == errno) {
+            std::string msg = "Folder " + _folder1Path + " doesn't exists";
+            syslog(LOG_ERR, msg.c_str());
             throw Error::NO_SUCH_FOLDER;
+        }
         else
             throw Error::UNKNOWN;
     }
@@ -23,7 +30,7 @@ void FolderWorker::work() {
     if (!dirExists(_folder2Path.c_str())) {
         closedir(dir1);
         std::string msg = "Folder " + _folder2Path + " doesn't exists";
-        syslog(LOG_WARNING, msg.c_str());
+        syslog(LOG_ERR, msg.c_str());
         throw Error::NO_SUCH_FOLDER;
     }
 
@@ -41,10 +48,21 @@ void FolderWorker::work() {
     }
 
     struct dirent* ent;
+    struct stat buff;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
     while ((ent = readdir(dir1)) != NULL) {
         std::string file = _folder1Path + "/" + ent->d_name;
-        system(("cp " + file + " " + folderNEWPath).c_str());
+        stat(file.c_str(), &buff);
+        long long fileAge = tv.tv_sec - (long long)buff.st_mtim.tv_sec;
+        syslog(LOG_NOTICE, "%s file %lld", file.c_str(), fileAge);
+        if (fileAge > (long long)_oldDefTime)
+            system(("cp " + file + " " + folderOLDPath).c_str());
+        else
+            system(("cp " + file + " " + folderNEWPath).c_str());
     }
+
+    closedir(dir1);
 }
 
 bool FolderWorker::dirExists(const std::string& folderPath) const {
