@@ -12,42 +12,31 @@
 #include <unistd.h>
 #include <syslog.h>
 
+const char* pidFilePath = "/tmp/lab1.pid";
+
 FolderWorker* g_folderWorker = nullptr;
 bool g_stopped = false;
 std::string g_configFilePath;
 size_t g_updateTime;
 
-void handleSIGTERM(int signum) {
-    g_stopped = true;
-}
+void handleSIGTERM(int signum);
 
-void handleSIGHUP(int signum) {
-    if (g_folderWorker == nullptr)
-    	return;
-    	
-    std::string folder1Path, folder2Path;
-    size_t oldDefTime, updateTime;
-    
-    try {
-    	ConfigReader reader(g_configFilePath);
-    	folder1Path = reader.getFolder1Path();
-    	folder2Path = reader.getFolder2Path();
-    	oldDefTime = reader.getOldDefTime();
-    	updateTime = reader.getUpdateTime();
-    } catch (Error error) {
-    	syslog(LOG_WARNING, "Exception occured while reading configuration file, daemon will work with previous configuration");
-    	return;
-    }
-    
-    syslog(LOG_NOTICE, "New configuration was uploaded from [%s]", g_configFilePath.c_str());
-    g_updateTime = updateTime;
-    g_folderWorker->setConfiguration(folder1Path, folder2Path, oldDefTime);
-}
+void handleSIGHUP(int signum);
+
+pid_t pidFileCheck();
+
+void clearPidFile();
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         std::cout << "You should specify configuration file\n";
         return EXIT_FAILURE;
+    }
+    
+    pid_t activePid = pidFileCheck();
+    if (activePid != 0) {
+    	std::string msg = "kill -15 " + std::to_string(activePid);
+    	system(msg.c_str());
     }
 
     openlog("lab1_log", LOG_PID, LOG_DAEMON);
@@ -98,9 +87,14 @@ int main(int argc, char* argv[]) {
     if (pid < 0)
         exit(EXIT_FAILURE);
 
-    if (pid > 0)
+    if (pid > 0) 
         exit(EXIT_SUCCESS);
-
+    
+    // Writing to the pid file
+    FILE* pidFile = fopen(pidFilePath, "w+");
+    fprintf(pidFile, "%d", getpid());
+    fclose(pidFile);
+    
     // Change the file mode mask
     umask(0);
 
@@ -126,8 +120,8 @@ int main(int argc, char* argv[]) {
             g_folderWorker->work();
         } catch (Error error) {
             syslog(LOG_NOTICE, "Daemon terminated with an error, code %zu", (size_t)error);
-            
             closelog();
+            clearPidFile();
             
             delete g_folderWorker;
             
@@ -140,5 +134,48 @@ int main(int argc, char* argv[]) {
     syslog(LOG_NOTICE, "Daemon terminated");
     closelog();
     delete g_folderWorker;
+    clearPidFile();
     return EXIT_SUCCESS;
+}
+
+void handleSIGTERM(int signum) {
+    g_stopped = true;
+}
+
+void handleSIGHUP(int signum) {
+    if (g_folderWorker == nullptr)
+    	return;
+    	
+    std::string folder1Path, folder2Path;
+    size_t oldDefTime, updateTime;
+    
+    try {
+    	ConfigReader reader(g_configFilePath);
+    	folder1Path = reader.getFolder1Path();
+    	folder2Path = reader.getFolder2Path();
+    	oldDefTime = reader.getOldDefTime();
+    	updateTime = reader.getUpdateTime();
+    } catch (Error error) {
+    	syslog(LOG_WARNING, "Exception occured while reading configuration file, daemon will work with previous configuration");
+    	return;
+    }
+    
+    syslog(LOG_NOTICE, "New configuration was uploaded from [%s]", g_configFilePath.c_str());
+    g_updateTime = updateTime;
+    g_folderWorker->setConfiguration(folder1Path, folder2Path, oldDefTime);
+}
+
+pid_t pidFileCheck() {
+    FILE* pidFile = fopen(pidFilePath, "r");
+    if (pidFile == NULL)
+    	return 0;
+    pid_t res;
+    fscanf(pidFile, "%d", &res);
+    fclose(pidFile);
+    return res;
+}
+
+void clearPidFile() {
+    FILE* pidFile = fopen(pidFilePath, "w+");
+    fclose(pidFile);
 }
