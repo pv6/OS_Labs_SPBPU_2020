@@ -1,0 +1,4 @@
+FOLDER_1=/home/evgenii/Desktop/F1
+FOLDER_2=/home/evgenii/Desktop/F2
+UPDATE_TIME=60
+OLD_DEF_TIME=180
