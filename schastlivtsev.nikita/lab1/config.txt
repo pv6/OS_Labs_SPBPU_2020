@@ -1,0 +1,5 @@
+PID_PATH /home/nikita/Documents/OSexperiment/lab1.pid
+FOLDER_SRC /home/nikita/Documents/OSexperiment/srcFolder
+FOLDER_DEST /home/nikita/Documents/OSexperiment/destFolder/
+WAIT_SEC 45
+TOTAL_LOG_NAME total.log
