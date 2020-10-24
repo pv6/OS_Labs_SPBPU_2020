@@ -29,7 +29,7 @@ int main(int argc, char const* argv[]) {
     syslog(LOG_INFO, "starting...");
 
     std::string default_config_path = "./conf.conf";
-    std::string default_pid_path = "./pid.pid";  //"/var/run/daemon.pid";
+    std::string default_pid_path = "/var/run/lab1.pid";
     std::string actual_config_path = default_config_path;
     std::string actual_pid_path = default_pid_path;
     
