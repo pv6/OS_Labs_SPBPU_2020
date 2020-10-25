@@ -1,0 +1,3 @@
+/home/tani/dir1
+/home/tani/dir2
+30
