@@ -9,5 +9,6 @@ if (CMAKE_BUILD_TYPE STREQUAL RELEASE)
 	add_compile_options(-Wall -Werror)
 endif()
 
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME}
+    src/main.cpp src/config.cpp src/diskmonitor.cpp)
 
