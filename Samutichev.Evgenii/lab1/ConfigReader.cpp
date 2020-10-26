@@ -11,7 +11,7 @@ ConfigReader::ConfigReader(const std::string& configFilePath) {
 
     std::ifstream configFile(configFilePath);
     if (!configFile.is_open()) {
-    	syslog(LOG_ERR, "Can't find configuration file [%s]", configFilePath.c_str());
+    	syslog(LOG_ERR, "Can't find configuration file");
         throw Error::NO_CONFIG_FILE;
     }
     std::string line;

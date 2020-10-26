@@ -21,8 +21,8 @@ Daemon* Daemon::get() {
 
 void Daemon::run(const char* configFilePath) {
     char* buff = realpath(configFilePath, NULL);
-    _configFilePath = buff;
     if (buff != NULL) {
+        _configFilePath = buff;
     	free(buff);
     }
 
@@ -154,7 +154,7 @@ void Daemon::handleSIGHUP(int signum) {
     	oldDefTime = reader.getOldDefTime();
     	updateTime = reader.getUpdateTime();
     } catch (Error error) {
-    	syslog(LOG_WARNING, "Exception occured while reading configuration file, daemon will work with previous configuration");
+    	syslog(LOG_WARNING, "Exception occured while reading configuration file, daemon will continue to work with previous configuration");
     	return;
     }
 
