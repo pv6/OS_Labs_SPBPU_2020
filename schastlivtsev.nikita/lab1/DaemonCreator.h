@@ -8,12 +8,12 @@ class DaemonCreator
 {
     public:
         // creation procedure
-        static void createDaemon(SettingsManager& settingsManager);
+        static bool createDaemon(SettingsManager& settingsManager);
     protected:
 
     private:
         // functions
-        static inline void forkWrapper();
+        static inline bool forkWrapper();
         static void savePid(char const * const pidFile, const pid_t pid);
         static void killBrother(char const * const pidFile);
 

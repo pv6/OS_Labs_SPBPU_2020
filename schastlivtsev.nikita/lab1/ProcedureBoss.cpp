@@ -17,7 +17,7 @@ void ProcedureBoss::launchProcCycle(DaemonProcedure& runnable) {
 }
 
 void ProcedureBoss::finishWork() {
-    notStopped = true; // should be stopped now
+    notStopped = false; // should be stopped now
 }
 
 void ProcedureBoss::setWaitSec(size_t const waitInterval) {

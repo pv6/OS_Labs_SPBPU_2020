@@ -4,24 +4,17 @@
 #include <unistd.h>
 #include <cstdio>
 #include <fstream>
+#include "SettingsManager.h"
 
-SignalHandler::SignalHandler()
-{
-    //ctor
-}
-
-SignalHandler::~SignalHandler()
-{
-    //dtor
-}
 
 namespace {
     static SettingsManager* s_settingsManager = nullptr;
 
     static void sigTermHandler(int) {
         syslog(LOG_INFO, "SIGTERM caught, exiting");
-        SignalHandler::removePidFile(s_settingsManager->getPidFile());
-        exit(0);
+        SignalHandler::removePidFile(Settings::getPidPath());
+        //exit(0);  // Memory leaks
+        s_settingsManager->finishSignal(); // say to the ProcedureBoss to finish the main cycle
     }
 
     static void sigHupHandler(int) {

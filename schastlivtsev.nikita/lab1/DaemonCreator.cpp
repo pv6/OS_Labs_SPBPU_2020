@@ -12,19 +12,24 @@
 
 #include "SignalHandler.h"
 
-void DaemonCreator::createDaemon(SettingsManager& settingsManager) {
-    forkWrapper(); // first fork
+bool DaemonCreator::createDaemon(SettingsManager& settingsManager) {
+    bool parent = forkWrapper(); // first fork
+    if (parent) {
+        return true; // can kill the parent process in main
+    }
 
     if (setsid() < 0) // new session
-        exit(1); // session creation failed
+        throw std::runtime_error("Session creation failed");
 
     // set signal handlers
-    SignalHandler sigHandler;
-    sigHandler.setSettingsManager(&settingsManager);
-    signal(SIGTERM, sigHandler.getSigtermHandler()); // SIGTERM -- finish
-    signal(SIGHUP, sigHandler.getSighupHandler()); // SIGHUP -- read config file
+    SignalHandler::setSettingsManager(&settingsManager);
+    signal(SIGTERM, SignalHandler::getSigtermHandler()); // SIGTERM -- finish
+    signal(SIGHUP, SignalHandler::getSighupHandler()); // SIGHUP -- read config file
 
-    forkWrapper(); // second fork
+    parent = forkWrapper(); // second fork
+    if (parent) {
+        return true; // can kill the parent process in main
+    }
 
     umask(0); // set mask for the file permissions
     chdir("/"); // set current directory
@@ -34,7 +39,7 @@ void DaemonCreator::createDaemon(SettingsManager& settingsManager) {
         close(x);
     }
 
-    std::string pidFilename(settingsManager.getPidFile());
+    std::string pidFilename(Settings::getPidPath());
     killBrother(pidFilename.c_str());
 
     pid_t pid = getpid();
@@ -42,18 +47,20 @@ void DaemonCreator::createDaemon(SettingsManager& settingsManager) {
 
     openlog("logLoggerDaemon", LOG_PID, LOG_DAEMON); // open system log
     syslog(LOG_INFO, "Daemon created");
+    return false; // it's the last fork, don't kill it
 }
 
 
-void DaemonCreator::forkWrapper() {
+bool DaemonCreator::forkWrapper() {
     pid_t pid = fork(); // create new process
 
     if (pid < 0) // error in fork
         throw std::runtime_error("Fork has not been created (PID < 0)");
     else if (pid > 0) { // kill parent
         closelog();
-        exit(0);
+        return true;  // it's a parent process
     }
+    return false;  // it's a child process
 }
 
 

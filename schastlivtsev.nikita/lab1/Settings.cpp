@@ -13,10 +13,6 @@ Settings::Settings()
 Settings::~Settings()
 {
     //dtor
-    if (pidPath) {
-        delete [] pidPath;
-        pidPath = nullptr;
-    }
     if (folderDest) {
         delete [] folderDest;
     }
@@ -30,6 +26,13 @@ Settings::~Settings()
 void Settings::parseConfig(char const * const filename) {
     std::ifstream config(filename, std::ios_base::in);
 
+    if (!config.good()) {
+        std::string errMsg("Config file with name ");
+        errMsg += filename;
+        errMsg += " not found";
+        throw std::runtime_error(errMsg.c_str());
+    }
+
     std::string confField;
     std::string confValue;
     std::string strLine;
@@ -41,16 +44,12 @@ void Settings::parseConfig(char const * const filename) {
         confValue = std::string(strLine).erase(0, delimeterPos + 1);
 
         // grammar
-        static const std::string pidPathLex("PID_PATH");
         static const std::string folderSrcLex("FOLDER_SRC");
         static const std::string folderDestLex("FOLDER_DEST");
         static const std::string waitLex("WAIT_SEC");
         static const std::string totalLogLex("TOTAL_LOG_NAME");
 
-        if (confField == pidPathLex) { // it's specific pid path
-            Helpers::strToCStr(&pidPath, confValue);
-        }
-        else if (confField == folderSrcLex) { // source folder (folder 1)
+        if (confField == folderSrcLex) { // source folder (folder 1)
             Helpers::strToCStr(&folderSrc, confValue);
         }
         else if (confField == folderDestLex) { // destination folder (folder 2)
@@ -79,10 +78,7 @@ void Settings::checkCriticalFields() {
 
 
 char const * const Settings::getPidPath() {
-    if (pidPath)
-        return pidPath;
-    else
-        return Settings::defaultPidPath;
+    return Settings::pidPath;
 }
 
 

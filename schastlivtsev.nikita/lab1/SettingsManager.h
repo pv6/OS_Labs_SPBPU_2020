@@ -14,10 +14,8 @@ class SettingsManager
         void linkEveryone(ProcedureBoss* procBoss, LogLogger* runnable);
         void updateSettings();
         void setConfig(char const * const filename);
-
-        char const * getPidFile();
+        void finishSignal();
     protected:
-
     private:
         ProcedureBoss* procedureBoss = nullptr;
         LogLogger* logLogger = nullptr;
