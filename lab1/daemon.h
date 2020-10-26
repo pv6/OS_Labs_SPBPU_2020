@@ -12,7 +12,7 @@
 class daemon {
 public:
     static void daemonize();
-    static error::error_name init(const std::string &config);
+    static error::error_name init(char* config);
 private:
     static std::string dir_first_;
     static std::string dir_second_;

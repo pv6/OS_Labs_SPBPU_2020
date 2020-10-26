@@ -26,32 +26,22 @@ std::string daemon::hist_log_;
 unsigned int daemon::interval_;
 const std::set<std::string> daemon::id_file_ = {"dir_1", "dir_2", "interval"};
 
-error::error_name daemon::init(const std::string &config) {
+error::error_name daemon::init(char *config) {
     error::error_name status = error::OK;
-    pid_t pid = fork();
-    if (pid == -1) {
-        std::string error_s = "First fork failed";
-        syslog(LOG_ERR, "%s", error_s.c_str());
-        clear();
-        throw user_exception(error_s, true);
+    pid_file_ = "/var/run/lab1.pid";
+    openlog((new std::string("DAEMON"))->c_str(), LOG_PID | LOG_NDELAY, LOG_USER);
+    config_ = realpath(config, nullptr);
+    if (config_ == nullptr) {
+        status = error::WRONG_FILE;
+        syslog(LOG_ERR, "%s", error::print_error(status));
+        return status;
     }
-    if (pid == 0) {
-        pid_file_ = "/var/run/lab1.pid";
-        openlog((new std::string("DAEMON"))->c_str(), LOG_PID | LOG_NDELAY, LOG_USER);
-        config_ = realpath(config.c_str(), nullptr);
-        if (config_ == nullptr) {
-            status = error::WRONG_FILE;
-            syslog(LOG_ERR, "%s", error::print_error(status));
-            return status;
-        }
-        char dir[PATH_MAX];
-        getcwd(dir, PATH_MAX);
-        dir_home_ = dir;
-        syslog(LOG_INFO, "Current directory is %s", dir);
-        set_signals();
-        status = load_config();
-    }
-    return status;
+    char dir[PATH_MAX];
+    getcwd(dir, PATH_MAX);
+    dir_home_ = dir;
+    syslog(LOG_INFO, "Current directory is %s", dir);
+    set_signals();
+    return load_config();
 }
 
 void daemon::daemonize() {

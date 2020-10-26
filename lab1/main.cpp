@@ -8,18 +8,23 @@ int main(int argc, char** argv) {
     if (argc != 2) {
         return -1;
     }
-    try {
-        error::error_name status = daemon::init(std::string(argv[1]));
-        if (status == error::OK) {
-            daemon::daemonize();
+    pid_t pid = fork();
+    if (pid == -1) {
+        return -1;
+    } else if (pid == 0) {
+        if (daemon::init(argv[1]) == error::OK) {
+            try {
+                daemon::daemonize();
+            }
+            catch (user_exception& e) {
+                if (e.is_exit_error())
+                    return -1;
+                else
+                    return 0;
+            }
+        } else {
+            return -1;
         }
     }
-    catch (user_exception& e) {
-        if (e.is_exit_error())
-            return -1;
-        else
-            return 0;
-    }
-
     return 0;
 }
