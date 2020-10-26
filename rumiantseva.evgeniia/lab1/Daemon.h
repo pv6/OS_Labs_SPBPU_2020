@@ -14,9 +14,8 @@ public:
     static const std::string pid_path;
 
     static Daemon& GetDaemonInst();
-
-    void SetConfig(char* configPath);
-    void SetHandler(void (*signalHandler)(int));
+    static void SignalHandler(int signal);
+    void SetConfig(const std::string& configPath);
 
     void ReadConfig();
     void Run();
@@ -24,6 +23,9 @@ public:
 
 private:
     Daemon();
+
+    Daemon(const Daemon &) = delete;
+    Daemon &operator=(const Daemon &) = delete;
 
     bool is_running = false;
     bool is_terminated = false;

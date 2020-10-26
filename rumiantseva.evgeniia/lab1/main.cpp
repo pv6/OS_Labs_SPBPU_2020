@@ -1,21 +1,5 @@
 #include "Daemon.h"
 
-void signal_handler(int signal) {
-    switch (signal) {
-        case SIGHUP:
-            syslog(LOG_NOTICE, "Updating configurations...");
-            Daemon::GetDaemonInst().ReadConfig();
-            break;
-        case SIGTERM:
-            Daemon::GetDaemonInst().Terminate();
-            // removing pid-file
-            unlink(Daemon::pid_path.c_str());
-            syslog(LOG_NOTICE, "Daemon is terminated");
-        default:
-            syslog(LOG_NOTICE, "Signal %i is not handled", signal);
-    }
-}
-
 int main(int argc, char *argv[]) {
     openlog("Daemon_FileReplace", LOG_PID, LOG_DAEMON);
     if (argc < 2) {
@@ -25,8 +9,8 @@ int main(int argc, char *argv[]) {
     }
     try {
         Daemon& daemon = Daemon::GetDaemonInst();
-        daemon.SetHandler(signal_handler);
-        daemon.SetConfig(argv[1]);
+        std::string configPath = argv[1];
+        daemon.SetConfig(configPath);
         daemon.Run();
     } catch (CustomException& e) {
         if (e.getErrorNumber()) {

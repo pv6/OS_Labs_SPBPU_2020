@@ -6,6 +6,23 @@
 
 const std::string Daemon::pid_path("/var/run/daemon.pid");
 
+void Daemon::SignalHandler(int signal) {
+    switch (signal) {
+        case SIGHUP:
+            syslog(LOG_NOTICE, "Updating configurations...");
+            Daemon::GetDaemonInst().ReadConfig();
+            break;
+        case SIGTERM:
+            Daemon::GetDaemonInst().Terminate();
+            // removing pid-file
+            unlink(Daemon::pid_path.c_str());
+            syslog(LOG_NOTICE, "Daemon is terminated");
+        default:
+            syslog(LOG_NOTICE, "Signal %i is not handled", signal);
+    }
+}
+
+
 void Daemon::ReadConfig() {
     syslog(LOG_NOTICE, "Reading config");
     is_running = false;
@@ -103,9 +120,18 @@ void Daemon::SavePid() {
     pidStream.close();
 }
 
-void Daemon::SetConfig(char *const configPath)
+void Daemon::SetConfig(const std::string& configPath)
 {
-    config_path = configPath;
+    char buf[_POSIX_PATH_MAX];
+    char *res = realpath(configPath.c_str(), buf);
+    if (!res) {
+        syslog(LOG_ERR, "Could not find config");
+        std::string errDescription = "Config file error";
+        throw CustomException(ERROR_EXIT, errDescription);
+    }
+    config_path = std::string(buf);
+    signal(SIGHUP, SignalHandler);
+    signal(SIGTERM, SignalHandler);
     ReadConfig();
 }
 
@@ -167,9 +193,4 @@ void Daemon::CopyFiles() {
 Daemon& Daemon::GetDaemonInst() {
     static Daemon daemonInst;
     return daemonInst;
-}
-
-void Daemon::SetHandler(void (*signalHandler)(int)) {
-    signal(SIGHUP, signalHandler);
-    signal(SIGTERM, signalHandler);;
 }
