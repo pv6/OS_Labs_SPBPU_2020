@@ -1,25 +1,30 @@
 #ifndef VIA8_DAEMON_H
 #define VIA8_DAEMON_H
 
-#include "exceptions.h"
 #include <string> // string
+#include "worker.h"
 
-class Daemon {
-protected:
-    std::string m_config_path;
-    std::string m_pid_path;
-    bool m_stop = false;
+// classic implementation of singleton
+class Daemon final {
+private:
+    static Daemon* m_instance;
+    Worker* m_worker;
+    std::string m_path_pidf;
 
 public:
-    explicit Daemon(std::string const& config_path, std::string const& pid_path);
-    virtual ~Daemon() {}
+    static Daemon* getDaemon(std::string const& path_pidf);
+    static void handle_signal(int signal);
+    bool daemonize() const;
 
-    void stop() { m_stop = true; }
-    bool daemonize(void (*handle_signal)(int)) const;
-    virtual void reconfigure() = 0;
-    virtual void work() = 0;
+    void worker_set(Worker* worker);
+    void worker_unset();
+    void worker_run();
+    void worker_reconfigure();
+    void worker_stop();
 
 private:
+
+    Daemon(std::string const& path_pidf);
     Daemon(Daemon const&) = delete;
     Daemon& operator=(Daemon const&) = delete;
 };

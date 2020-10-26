@@ -5,10 +5,10 @@ BLDDIR=./build
 SOURCES=$(wildcard $(SRCDIR)/*.cpp)
 OBJECTS=$(patsubst $(SRCDIR)/%.cpp, %.o, $(SOURCES))
 
-all: dirs exec clear
+all: dir exec clear
 
-dirs:
-	mkdir -p $(SRCDIR) $(BLDDIR)
+dir:
+	mkdir -p $(BLDDIR)
 
 exec: $(OBJECTS)
 	$(CC) -o $(BLDDIR)/lab1 $^

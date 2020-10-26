@@ -1,4 +1,5 @@
 #include "../include/daemon.h"
+#include "../include/exceptions.h"
 
 #include <stdlib.h> // realpath
 #include <fcntl.h>  // open
@@ -9,25 +10,30 @@
 
 #include <sys/types.h> 
 #include <sys/stat.h> // umask
+#include <limits.h>   // PATH_MAX
 
-Daemon::Daemon(std::string const& config_path, std::string const& pid_path) {
-    // save absolute paths
-	char* buff = new char[256];
-	if (realpath(config_path.c_str(), buff) == NULL) {
+Daemon* Daemon::m_instance = nullptr;
+
+Daemon* Daemon::getDaemon(std::string const& path_pidf) {
+    if (m_instance != nullptr) {
+        return m_instance;
+    }
+
+    // get absolute path
+	char* buff = new char[PATH_MAX];
+	if (realpath(path_pidf.c_str(), buff) == NULL) {
         delete[] buff;
         throw InvalidPathException();
     }
-	m_config_path = std::string(buff);
-	if (system((std::string("touch ") + pid_path).c_str()) != 0 ||
-        realpath(pid_path.c_str(), buff) == NULL) {
-        delete[] buff;
-        throw InvalidPathException();
-    }
-	m_pid_path = std::string(buff);
+    m_instance = new Daemon(std::string(buff));
 	delete[] buff;
+    return m_instance;
 }
 
-bool Daemon::daemonize(void (*handle_signal)(int)) const {
+Daemon::Daemon(std::string const& path_pidf) :
+    m_path_pidf(path_pidf) {}
+
+bool Daemon::daemonize() const {
     // 1st fork
     int pid = (int)fork();
     if (pid < 0) {
@@ -77,15 +83,15 @@ bool Daemon::daemonize(void (*handle_signal)(int)) const {
     syslog(LOG_DEBUG, "working directory has been changed");
 
     // add signal handlers
-    if (signal(SIGHUP, (sighandler_t)handle_signal) == SIG_ERR ||
-        signal(SIGTERM, (sighandler_t)handle_signal) == SIG_ERR) {
+    if (signal(SIGHUP, (sighandler_t)Daemon::handle_signal) == SIG_ERR ||
+        signal(SIGTERM, (sighandler_t)Daemon::handle_signal) == SIG_ERR) {
         throw SignalException();
     }
     syslog(LOG_DEBUG, "signal handlers have been established");
     
     // check whether another instance of program is currently running, terminate it
     std::ifstream pid_ifstream;
-    pid_ifstream.open(m_pid_path.c_str(), std::ifstream::in);
+    pid_ifstream.open(m_path_pidf.c_str(), std::ifstream::in);
     if (pid_ifstream.good()) {
         int existing_pid;
         if (!(pid_ifstream >> existing_pid)) {
@@ -101,7 +107,7 @@ bool Daemon::daemonize(void (*handle_signal)(int)) const {
 
     // save pid to .pid file
     std::ofstream pid_ofstream;
-    pid_ofstream.open(m_pid_path.c_str(), std::ofstream::out);
+    pid_ofstream.open(m_path_pidf.c_str(), std::ofstream::out);
     if (pid_ofstream.good()) {
         pid_ofstream << (int)getpid();
         pid_ofstream.close();
@@ -114,4 +120,52 @@ bool Daemon::daemonize(void (*handle_signal)(int)) const {
     // success
     syslog(LOG_INFO, "process successfully daemonized");
     return true;
+}
+
+void Daemon::handle_signal(int signal) {
+    switch(signal) {
+    case SIGHUP:
+        syslog(LOG_INFO, "SIGHUP signal catched");
+        if (Daemon::m_instance != nullptr) {
+            Daemon::m_instance->worker_reconfigure();
+        }
+        break;
+    case SIGTERM:
+        syslog(LOG_INFO, "SIGTERM signal catched");
+        if (Daemon::m_instance != nullptr) {
+            Daemon::m_instance->worker_stop();
+        }
+    }
+}
+
+void Daemon::worker_set(Worker* worker) {
+    if (worker == nullptr) {
+        throw NullPtrException();
+    }
+    m_worker = worker;
+}
+
+void Daemon::worker_unset() {
+    m_worker = nullptr;
+}
+
+void Daemon::worker_run() {
+    if (m_worker != nullptr) {
+        syslog(LOG_DEBUG, "running worker");
+        m_worker->work();
+    }
+}
+
+void Daemon::worker_reconfigure() {
+    if (m_worker != nullptr) {
+        syslog(LOG_DEBUG, "reconfiguring worker");
+        m_worker->reconfigure();
+    }
+}
+
+void Daemon::worker_stop() {
+    if (m_worker != nullptr) {
+        syslog(LOG_DEBUG, "stopping worker");
+        m_worker->stop();
+    }
 }

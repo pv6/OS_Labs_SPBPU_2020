@@ -1,30 +1,31 @@
-#include "../include/daemon09.h"
+#include "../include/worker09.h"
 #include "../include/exceptions.h"
+
 #include <fstream>    // ifstream, ofstream
 #include <unistd.h>   // usleep
 #include <syslog.h>   // syslog
 #include <sys/stat.h> // stat
 #include <stdlib.h>   // realpath, system
 
-Daemon09::Daemon09(std::string const& config_path, std::string const& pid_path) :
-    Daemon(config_path, pid_path) {
+Worker09::Worker09(std::string const& path_conf) :
+    Worker(path_conf) {
     configure();
 }
 
 // this func will throw exceptions, reconfigure() will not
-void Daemon09::configure() {
+void Worker09::configure() {
     // open config file
-    std::ifstream config_ifstream;
-    config_ifstream.open(m_config_path);
-    if (!config_ifstream.good()) {
+    std::ifstream ifstream_conf;
+    ifstream_conf.open(m_path_conf);
+    if (!ifstream_conf.good()) {
         throw OpenFileException();
     }
 
     // read config file
     std::string config;
     std::string value;
-    while (config_ifstream >> config) {
-        if (!(config_ifstream >> value)) {
+    while (ifstream_conf >> config) {
+        if (!(ifstream_conf >> value)) {
             throw InvalidConfigException();
         }
         if (std::string("DIR_FROM").compare(config) == 0) {
@@ -58,7 +59,7 @@ void Daemon09::configure() {
     syslog(LOG_INFO, "configuration has been complete");
 }
 
-void Daemon09::reconfigure() {
+void Worker09::reconfigure() {
     try {
         configure();
     }
@@ -67,7 +68,7 @@ void Daemon09::reconfigure() {
     }
 }
 
-void Daemon09::work() {
+void Worker09::work() {
     std::string const img = "/IMG ";
     std::string const others = "/OTHERS ";
     std::string const ignore = "2>/dev/null ";
