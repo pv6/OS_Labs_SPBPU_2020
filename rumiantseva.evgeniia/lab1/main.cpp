@@ -7,11 +7,10 @@ void signal_handler(int signal) {
             Daemon::GetDaemonInst().ReadConfig();
             break;
         case SIGTERM:
-            syslog(LOG_NOTICE, "Daemon is terminated");
+            Daemon::GetDaemonInst().Terminate();
             // removing pid-file
             unlink(Daemon::pid_path.c_str());
-            closelog();
-            exit(EXIT_SUCCESS);
+            syslog(LOG_NOTICE, "Daemon is terminated");
         default:
             syslog(LOG_NOTICE, "Signal %i is not handled", signal);
     }
@@ -22,10 +21,22 @@ int main(int argc, char *argv[]) {
     if (argc < 2) {
         syslog(LOG_ERR, "Configurations file is required as a second argument");
         closelog();
-        exit(EXIT_FAILURE);
+        return 1;
     }
-    Daemon& daemon = Daemon::GetDaemonInst();
-    daemon.SetHandler(signal_handler);
-    daemon.SetConfig(argv[1]);
-    daemon.Run();
+    try {
+        Daemon& daemon = Daemon::GetDaemonInst();
+        daemon.SetHandler(signal_handler);
+        daemon.SetConfig(argv[1]);
+        daemon.Run();
+    } catch (CustomException& e) {
+        if (e.getErrorNumber()) {
+            syslog(LOG_ERR, "%s", e.what());
+            closelog();
+            return 1;
+        }
+        closelog();
+        return 0;
+    }
+    closelog();
+    return 0;
 }

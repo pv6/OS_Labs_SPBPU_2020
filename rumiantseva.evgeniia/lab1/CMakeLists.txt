@@ -3,4 +3,4 @@ project(1)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(1 main.cpp Daemon.cpp Daemon.h directoryUtils.cpp directoryUtils.h)
+add_executable(1 main.cpp Daemon.cpp Daemon.h directoryUtils.cpp directoryUtils.h CustomException.cpp CustomException.h)

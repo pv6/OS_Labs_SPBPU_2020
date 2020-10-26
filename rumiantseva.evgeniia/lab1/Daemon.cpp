@@ -12,7 +12,8 @@ void Daemon::ReadConfig() {
     std::ifstream configStream(config_path);
     if (!configStream.is_open()) {
         syslog(LOG_ERR, "Config file %s was not opened", config_path.c_str());
-        exit(EXIT_FAILURE);
+        std::string errDescription = "Config read error";
+        throw CustomException(ERROR_EXIT, errDescription);
     }
     path_from.clear();
     path_to.clear();
@@ -21,7 +22,8 @@ void Daemon::ReadConfig() {
 
     if (!path_from.length() || !path_to.length() || copy_interval <= 0 || new_file_time_limit <= 0) {
         syslog(LOG_ERR, "Invalid config format");
-        exit(EXIT_FAILURE);
+        std::string errDescription = "Config format error";
+        throw CustomException(ERROR_EXIT, errDescription);
     }
     configStream.close();
     is_running = true;
@@ -32,29 +34,35 @@ Daemon::Daemon() {
     pid_t pid = fork();
     if (pid == -1) {
         syslog(LOG_ERR, "1st fork failure");
-        exit(EXIT_FAILURE);
+        std::string errDescription = "Fork error";
+        throw CustomException(ERROR_EXIT, errDescription);
     } else if (pid != 0) {
         syslog(LOG_NOTICE, "Parent process");
-        exit(EXIT_SUCCESS);
+        std::string errDescription = "After fork exit";
+        throw CustomException(NORMAL_EXIT, errDescription);
     }
     if (setsid() < 0) {
         syslog(LOG_ERR, "Failed to create a session");
-        exit(EXIT_FAILURE);
+        std::string errDescription = "Session error";
+        throw CustomException(ERROR_EXIT, errDescription);
     }
     pid = fork();
     if (pid == -1) {
         syslog(LOG_ERR, "2nd fork failure");
-        exit(EXIT_FAILURE);
+        std::string errDescription = "Fork error";
+        throw CustomException(ERROR_EXIT, errDescription);
     } else if (pid != 0) {
         syslog(LOG_NOTICE, "Parent process");
-        exit(EXIT_SUCCESS);
+        std::string errDescription = "After fork exit";
+        throw CustomException(NORMAL_EXIT, errDescription);
     }
     // Сброс маски режима создания пользовательских файлов
     umask(0);
 
     if ((chdir("/")) < 0) {
         syslog(LOG_ERR, "Failed to change directory");
-        exit(EXIT_FAILURE);
+        std::string errDescription = "Directory error";
+        throw CustomException(ERROR_EXIT, errDescription);
     }
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
@@ -69,7 +77,8 @@ void Daemon::CheckPrevPid() {
     std::ifstream pidStream(pid_path);
     if (!pidStream.is_open()) {
         syslog(LOG_ERR, "Smth wrong with PID file (was not opened to read)");
-        exit(EXIT_FAILURE);
+        std::string errDescription = "PID-file error";
+        throw CustomException(ERROR_EXIT, errDescription);
     }
     if (!pidStream.eof()) {
         pid_t prevDaemonPid;
@@ -87,7 +96,8 @@ void Daemon::SavePid() {
     std::ofstream pidStream(pid_path);
     if (!pidStream.is_open()) {
         syslog(LOG_ERR, "Smth wrong with PID file (was not opened to write)");
-        exit(EXIT_FAILURE);
+        std::string errDescription = "PID-file error";
+        throw CustomException(ERROR_EXIT, errDescription);
     }
     pidStream << getpid();
     pidStream.close();
@@ -102,11 +112,15 @@ void Daemon::SetConfig(char *const configPath)
 void Daemon::Run() {
     syslog(LOG_NOTICE, "Running...");
     is_running = true;
-    while (true) {
+    while (!is_terminated) {
         if (is_running)
             CopyFiles();
         sleep(copy_interval);
     }
+}
+
+void Daemon::Terminate(){
+    is_terminated = true;
 }
 
 void Daemon::CopyFiles() {

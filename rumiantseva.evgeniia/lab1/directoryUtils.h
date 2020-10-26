@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "CustomException.h"
+
 void CopyFile(const std::string &from, const std::string &to);
 
 void CreateDir(const std::string &path);

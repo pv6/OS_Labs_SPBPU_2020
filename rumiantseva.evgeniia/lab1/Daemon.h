@@ -20,11 +20,13 @@ public:
 
     void ReadConfig();
     void Run();
+    void Terminate();
 
 private:
     Daemon();
 
     bool is_running = false;
+    bool is_terminated = false;
     std::string config_path;
     std::string path_from;
     std::string path_to;
