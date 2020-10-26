@@ -22,17 +22,22 @@ int main(int argc, char const * const argv[])
             throw std::runtime_error("Expected config name as the first parameter in CLI");
         }
 
-        // create settings manager instance and pass config file to parse
-        SettingsManager settingsManager;
+        SettingsManager settingsManager;  // create settings manager (lazy-init)
+        // Daemon creator requires settings manager to create signal handlers
+
+        // daemon creation
+        bool parent = DaemonCreator::createDaemon(settingsManager); // make all preparations (like forks)
+        if (parent) {
+            return success;  // kill parent process
+        }
+
+        // Pass config file to parse
         settingsManager.setConfig(config);
 
         ProcedureBoss procBoss; // create procedure manager who launches procedure periodically
         LogLogger logLogger; // create log logger to log logs (main daemon procedure executor)
         settingsManager.linkEveryone(&procBoss, &logLogger); // link to the settings manager
         settingsManager.updateSettings(); // parse config and set values to start
-
-        // daemon creation
-        DaemonCreator::createDaemon(settingsManager); // make all preparations (like forks)
 
         // launch routine
         procBoss.launchProcCycle(logLogger); // launch main cycle

@@ -12,3 +12,9 @@ mv lab1 ../lab1
 # delete temporary files
 cd ..
 rm -r build
+
+# create dir for the PID file
+cd /var/run
+sudo mkdir lab1
+sudo chown nikita:nikita lab1
+

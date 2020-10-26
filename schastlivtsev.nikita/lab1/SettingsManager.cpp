@@ -31,6 +31,11 @@ void SettingsManager::updateSettings() {
 }
 
 
+void SettingsManager::finishSignal() {
+    procedureBoss->finishWork();
+}
+
+
 void SettingsManager::setConfig(char const * const filename) {
     if (!filename)
         throw std::runtime_error("Null pointer passed as config name into SettingsManager::setConfig");
@@ -44,9 +49,4 @@ void SettingsManager::assignSettings() {
     procedureBoss->setWaitSec(settings.getWaitSec());
     logLogger->setTotalLogName(settings.getTotalLogName());
     logLogger->setDirs(settings.getFolderSrc(), settings.getFolderDest());
-}
-
-
-char const * SettingsManager::getPidFile() {
-    return settings.getPidPath();
 }
