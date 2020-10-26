@@ -67,10 +67,10 @@ Daemon::Daemon() {
     // Fork parent process
     pid = fork();
     if (pid < 0)
-        exit(EXIT_FAILURE);
+        throw Error::FORK_ERROR;
 
     if (pid > 0)
-        exit(EXIT_SUCCESS);
+        throw Error::OK;
 
     // Create SID for child process
     if (setsid() < 0)
@@ -82,10 +82,10 @@ Daemon::Daemon() {
 
     pid = fork();
     if (pid < 0)
-        exit(EXIT_FAILURE);
+        throw Error::FORK_ERROR;
 
     if (pid > 0)
-        exit(EXIT_SUCCESS);
+        throw Error::OK;
 
     initPidFile();
 

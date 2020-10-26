@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    Daemon* daemon;
+    Daemon* daemon = nullptr;
 
     try {
         daemon = Daemon::get();
@@ -18,7 +18,10 @@ int main(int argc, char* argv[]) {
     }
     catch (Error error) {
         delete daemon;
-        return EXIT_FAILURE;
+        if (error == Error::OK)
+            return EXIT_SUCCESS;
+        else
+            return EXIT_FAILURE;
     }
 
     delete daemon;

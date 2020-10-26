@@ -7,7 +7,8 @@ enum class Error {
     NO_CONFIG_FILE = 2,
     CONFIG_FAIL = 3,
     NO_SUCH_FOLDER = 4,
-    UNKNOWN = 5
+    UNKNOWN = 5,
+    FORK_ERROR = 6
 };
 
 #endif // ERROR_H_INCLUDED
