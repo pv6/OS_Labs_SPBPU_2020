@@ -66,23 +66,29 @@ Daemon::Daemon() {
 
     // Fork parent process
     pid = fork();
-    if (pid < 0)
+    if (pid < 0) {
+    	syslog(LOG_ERR, "Failed to fork [1]");
         throw Error::FORK_ERROR;
+    }
 
     if (pid > 0)
         throw Error::OK;
 
     // Create SID for child process
-    if (setsid() < 0)
-        exit(EXIT_FAILURE);
+    if (setsid() < 0) {
+    	syslog(LOG_ERR, "Failed to create SID");
+        throw Error::FORK_ERROR;
+    }
 
     signal(SIGCHLD, SIG_IGN);
     signal(SIGHUP, Daemon::handleSIGHUP);
     signal(SIGTERM, Daemon::handleSIGTERM);
 
     pid = fork();
-    if (pid < 0)
+    if (pid < 0) {
+    	syslog(LOG_ERR, "Failed to fork [2]");
         throw Error::FORK_ERROR;
+    }
 
     if (pid > 0)
         throw Error::OK;
