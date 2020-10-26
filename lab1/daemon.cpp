@@ -15,6 +15,7 @@
 #include <fstream>
 #include <dirent.h>
 #include <ctime>
+#include "user_exception.h"
 
 char* daemon::config_ = nullptr;
 std::string daemon::pid_file_;
@@ -45,18 +46,20 @@ error::error_name daemon::init(char *config) {
 
 void daemon::daemonize() {
     setsid();
-    int pid = (int)fork();
+    pid_t pid = fork();
     if (pid == -1) {
-        syslog(LOG_ERR, "Creating daemon's child failed");
+        std::string error_s = "Creating daemon's child failed";
+        syslog(LOG_ERR, "%s", error_s.c_str());
         clear();
-        exit(SIGTERM);
+        throw user_exception(error_s, true);
     }
     if (pid == 0) {
         umask(0);
         if (chdir("/") == -1) {
-            syslog(LOG_ERR, "Chdir failed");
+            std::string error_s = "Chdir failed";
+            syslog(LOG_ERR, "%s", error_s.c_str());
             clear();
-            exit(SIGTERM);
+            throw user_exception(error_s, true);
         }
         work();
     }
@@ -76,19 +79,19 @@ void daemon::clear() {
 
 void daemon::signal_handler(int sig_num) {
     switch(sig_num){
+        default:
+            break;
         case SIGHUP:
-            /* rehash the server */
             if (load_config() != error::OK) {
                 clear();
-                exit(SIGTERM);
+                std::string error_s = "Impossible to overload config on SIGHUP";
+                throw user_exception(error_s, true);
             }
             break;
         case SIGTERM:
-            /* finalize the server */
             clear();
-            exit(SIGTERM);
-        default:
-            break;
+            std::string error_s = "SIGTERM is received";
+            throw user_exception(error_s, true);
     }
 }
 
@@ -244,7 +247,8 @@ void daemon::work() {
     pid_file_ = full_path(pid_file_);
     if (pid_file_.empty() || !check_pid()) {
         clear();
-        exit(SIGTERM);
+        std::string error_s = "Pid failed";
+        throw user_exception(error_s, true);
     }
     syslog(LOG_INFO, "Starting...");
     while (1) {

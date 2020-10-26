@@ -1,21 +1,30 @@
 #include <iostream>
 #include "daemon.h"
 #include <unistd.h>
+#include "user_exception.h"
 
 
 int main(int argc, char** argv) {
     if (argc != 2) {
-        exit(EXIT_FAILURE);
+        return -1;
     }
-    int pid = (int)fork();
+    pid_t pid = fork();
     if (pid == -1) {
-        exit(EXIT_FAILURE);
+        return -1;
     } else if (pid == 0) {
         if (daemon::init(argv[1]) == error::OK) {
-            daemon::daemonize();
+            try {
+                daemon::daemonize();
+            }
+            catch (user_exception& e) {
+                if (e.is_exit_error())
+                    return -1;
+                else
+                    return 0;
+            }
         } else {
-            exit(EXIT_FAILURE);
+            return -1;
         }
     }
-    return EXIT_SUCCESS;
+    return 0;
 }
