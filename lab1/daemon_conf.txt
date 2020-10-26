@@ -1,0 +1,3 @@
+interval = 30
+dir_1 = dir1/
+dir_2 = dir2/
