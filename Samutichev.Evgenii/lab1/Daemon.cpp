@@ -68,6 +68,7 @@ Daemon::Daemon() {
     pid = fork();
     if (pid < 0) {
     	syslog(LOG_ERR, "Failed to fork [1]");
+    	_lastError = Error::FORK_ERROR;
         throw Error::FORK_ERROR;
     }
 
@@ -77,6 +78,7 @@ Daemon::Daemon() {
     // Create SID for child process
     if (setsid() < 0) {
     	syslog(LOG_ERR, "Failed to create SID");
+    	_lastError = Error::FORK_ERROR;
         throw Error::FORK_ERROR;
     }
 
@@ -87,6 +89,7 @@ Daemon::Daemon() {
     pid = fork();
     if (pid < 0) {
     	syslog(LOG_ERR, "Failed to fork [2]");
+    	_lastError = Error::FORK_ERROR;
         throw Error::FORK_ERROR;
     }
 

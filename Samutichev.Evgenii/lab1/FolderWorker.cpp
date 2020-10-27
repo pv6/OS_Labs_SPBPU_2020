@@ -53,6 +53,7 @@ void FolderWorker::work() {
         system(("mkdir " + folderOLDPath).c_str());
     }
 
+    syslog(LOG_NOTICE, "Working...");
     struct dirent* ent;
     struct stat buff;
     struct timeval tv;
