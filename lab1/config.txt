@@ -1,3 +1,0 @@
-Time = 30
-Dir1 = dir1/
-Dir2 = dir2/
