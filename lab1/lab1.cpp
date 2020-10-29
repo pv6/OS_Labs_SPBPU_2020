@@ -198,13 +198,13 @@ int deleteSubFolders(std::string path, int deepLevel){
         return EXIT_FAILURE;
     }
 
-    char folderRemove[22];
+    char folderRemove[255];
     strcpy(folderRemove, path.c_str());
     DIR *theFolder = opendir(folderRemove);
     struct dirent *next_file;
     struct stat st{};
     int rc = 0;
-    char filepath[300];
+    char filepath[605];
 
     while((next_file = readdir(theFolder)) != NULL ){
         sprintf(filepath, "%s/%s", folderRemove, next_file->d_name);
