@@ -14,21 +14,23 @@ class DiskMonitor {
 
     struct Configuration {
         vector<string> watchPaths; // (watch descriptors + paths to directries)
-        unsigned int maxEvents; // maximum number of buffered watches
+        unsigned int maxEvents; // maximum number of buffered events
 
         string toString();
 
         static Configuration * defaultConfig();
     } *config;
+
+    // mapping from FD to file path; therefore paths duplicated in this and conig->watchPaths.
     map<int, string> pathMap;
 
     // inotify instance descriptor
     int inotifyFd = -1;
 
-    // recursively add watches starting with directory
+    // create watches by lookup config's "watchPaths" field, fill "pathMap" accordingly
     void addWatches();
 
-    // remove all active watches
+    // remove all active watches, clean "pathMap" and config->watchPaths.
     void removeWatches();
 
     // retrieve directories and max watches from file, PURE, MEMALLOC
