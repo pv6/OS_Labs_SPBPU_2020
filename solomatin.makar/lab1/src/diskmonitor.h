@@ -15,9 +15,9 @@ class DiskMonitor {
     struct Configuration {
         vector<string> watchPaths; // (watch descriptors + paths to directries)
         unsigned int maxEvents; // maximum number of buffered events
+        Configuration() : maxEvents(128) {}
 
         string toString();
-
         static Configuration * defaultConfig();
     } *config;
 
