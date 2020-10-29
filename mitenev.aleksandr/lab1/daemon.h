@@ -25,6 +25,7 @@ private:
     static std::string configFile_;
     static std::string totalLog_;
     static unsigned int period_;
+    static bool status_;
 
     static bool setConfig(const std::string &configFile);
     static bool readConfig();

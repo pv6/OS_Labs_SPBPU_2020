@@ -11,7 +11,6 @@ int main(int argc, char **argv) {
 
     if (Daemon::init(argv[1])){
         Daemon::run();
-        Daemon::terminate();
     }
 
     return 0;

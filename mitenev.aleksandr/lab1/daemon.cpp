@@ -20,12 +20,13 @@ std::string Daemon::dir2_;
 std::string Daemon::homeDir_;
 std::string Daemon::configFile_;
 std::string Daemon::totalLog_;
-
+bool Daemon::status_;
 
 bool Daemon::init(const std::string &configFile) {
     openlog(title_.c_str(), LOG_PID | LOG_NDELAY, LOG_USER);
     syslog(LOG_INFO, "Run init");
 
+    status_ = true;
 
     char buff[FILENAME_MAX];
 
@@ -162,12 +163,10 @@ void Daemon::signalHandler(int signal) {
             syslog(LOG_INFO, "Updating config file");
             if(!readConfig()){
                 terminate();
-                exit(EXIT_SUCCESS);
             }
             break;
         case SIGTERM:
             terminate();
-            exit(EXIT_SUCCESS);
             break;
         default:
             syslog(LOG_INFO, "Signal %i is not handled", signal);
@@ -254,6 +253,7 @@ std::string Daemon::getAbsPath(const std::string &path) {
 }
 
 void Daemon::terminate() {
+    status_ = false;
     syslog(LOG_INFO, "Close log");
     closelog();
 }
@@ -261,7 +261,7 @@ void Daemon::terminate() {
 void Daemon::run() {
     syslog(LOG_INFO, "Run process");
 
-    while (doWork()){
+    while (status_ && doWork()){
         sleep(period_);
     }
 }
