@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+kozlov.dmitrii/build-lab1-Desktop_Qt_5_15_1_GCC_64bit-Debug/
+kozlov.dmitrii/lab1/.idea/
+kozlov.dmitrii/lab1/CMakeLists.txt.user
