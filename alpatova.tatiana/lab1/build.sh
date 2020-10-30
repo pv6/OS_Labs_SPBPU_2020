@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PID_LOCATION="pid.txt"
+PID_LOCATION="/var/run/lab1.pid"
 
 if [[ ! -f "$PID_LOCATION" ]]; then
 	touch "$PID_LOCATION"

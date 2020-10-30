@@ -6,88 +6,89 @@ std::string daemon::dir1;
 std::string daemon::dir2;
 size_t daemon::interval;
 
-void daemon::daemon_fork() {
+bool daemon::daemon_fork() {
     pid_t pid = fork();
     if (pid == -1){
-        syslog(LOG_ERR, "Daemon start failed");
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Daemon fork was failed");
     }
     else if (pid > 0) {
-        exit(EXIT_SUCCESS);
+        return false;
     }
+    return true;
 }
 
-int daemon::delete_prev_daemon() {
+void daemon::delete_prev_daemon() {
     std:: ifstream pid_file(pid_path);
-    if (pid_file.is_open() && !pid_file.eof()) {
+    if (pid_file.is_open()) {
         pid_t prev;
         pid_file >> prev;
         if (prev > 0) {
             kill(prev, SIGTERM);
         }
         pid_file.close();
+        syslog(LOG_NOTICE, "Previous daemon was killed");
     }
     else{
-        syslog(LOG_ERR, "Could nit open pid file %s", pid_path.c_str());
-        return EXIT_FAILURE;
+        std::string err = "Could not open pid file: " + pid_path;
+        throw std::runtime_error(err);
     }
-    return EXIT_SUCCESS;
 }
 
-int daemon::set_pid_file(){
+void daemon::set_pid_file(){
     std:: ofstream pid_file(pid_path);
     if(pid_file.is_open()){
         pid_file << getpid();
         pid_file.close();
+        syslog(LOG_NOTICE, "PID was saved");
     }
     else{
-        syslog(LOG_ERR, "Could nit open pid file %s", pid_path.c_str());
-        return EXIT_FAILURE;
+        std::string err = "Could not open pid file: " + pid_path;
+        throw std::runtime_error(err);
     }
-    return EXIT_SUCCESS;
 }
-int daemon::create() {
+bool daemon::create() {
     read_config();
-    daemon_fork();
-    openlog("daemon_lab", LOG_NOWAIT | LOG_PID, LOG_DAEMON);
+
+    if (!daemon_fork()){
+        return false;
+    }
+
     umask(0);
     if (setsid() < 0)
-    {
-        syslog(LOG_ERR, "Could not generate session ID for child process");
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Could not generate session ID for child process");
+
+    if (!daemon_fork()){
+        return false;
     }
-    daemon_fork();
+
     if ((chdir("/")) < 0)
-    {
-        syslog(LOG_ERR, "Could not change working directory to /");
-        exit(EXIT_FAILURE);
-    }
-    syslog(LOG_NOTICE, "Successfully started daemon_lab");
+        throw std::runtime_error("Could not change working directory to /");
+
+    syslog(LOG_NOTICE, "Successfully started child process");
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
+
     signal(SIGHUP, signal_handler);
     signal(SIGTERM, signal_handler);
-    if (delete_prev_daemon() == EXIT_FAILURE){
-        return EXIT_FAILURE;
-    }
-    if (set_pid_file() == EXIT_FAILURE){
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
+    syslog(LOG_NOTICE, "Signal handler was updated");
+
+    delete_prev_daemon();
+    set_pid_file();
+
+    syslog(LOG_NOTICE, "Daemon was set up");
+    return true;
 }
 void daemon:: signal_handler(int signal) {
     switch (signal) {
         case SIGHUP:
-            syslog(LOG_NOTICE, "Reload new config");
-            if (read_config() == EXIT_FAILURE) {
-                exit(EXIT_FAILURE);
-            }
+            syslog(LOG_NOTICE, "Config was reload");
+            read_config();
             break;
         case SIGTERM:
-            syslog(LOG_NOTICE, "Terminate deamon by signal");
+            syslog(LOG_NOTICE, "Terminate daemon by signal");
             closelog();
-            exit(0);
+            finish();
         default:
             syslog(LOG_NOTICE, "Unknown signal");
             break;
@@ -96,21 +97,19 @@ void daemon:: signal_handler(int signal) {
 
 void daemon::set_config(std::string &conf_file) {
     std:: string work_dir = std::string(get_current_dir_name());
-    pid_path = work_dir +"/" + PID_FILE;
+    pid_path = PID_FILE;
     config_path = work_dir + "/" + conf_file;
 }
 
-int daemon::read_config(){
+void daemon::read_config(){
     std:: ifstream conf_file(config_path);
     if(conf_file.is_open() && !conf_file.eof()) {
         conf_file >> dir1 >> dir2 >> interval;
         conf_file.close();
     }
     else{
-        syslog(LOG_NOTICE, "Can not read config file\n");
-        return EXIT_FAILURE;
+        throw std::runtime_error("Could not read config file");
     }
-    return EXIT_SUCCESS;
 }
 
 void daemon::move(const char* src_path, const char* dst_path) {
@@ -122,7 +121,7 @@ void daemon::move(const char* src_path, const char* dst_path) {
     close(source);
     close(dest);
     if (std::remove(src_path) != 0) {
-        syslog(LOG_NOTICE, "Could not move file");
+        throw std::runtime_error("Could not remove file");
     }
 }
 
@@ -132,12 +131,10 @@ void daemon::work(const std::string& dir1, const std::string& dir2, Mode mode) {
     time_t creation_time, cur_time;
 
     DIR *dir;
-    try {
-        dir = opendir(dir1.c_str());
-    }
-    catch (...) {
-        syslog(LOG_ERR, "Problem with directory: %s", dir1.c_str());
-        exit(EXIT_FAILURE);
+    dir = opendir(dir1.c_str());
+    if (!dir){
+        std::string err = "Could not open directory: " + dir1;
+        throw std::runtime_error(err);
     }
 
     time(&cur_time);
@@ -167,10 +164,19 @@ void daemon::work(const std::string& dir1, const std::string& dir2, Mode mode) {
 }
 
 void daemon::run() {
-    while (true)
+    is_finished = false;
+    syslog(LOG_NOTICE, "Successfully run daemon_lab process");
+    int i = 0;
+    while (!is_finished)
     {
+        syslog(LOG_NOTICE, "Successfully done %i operation", ++i);
         work(dir1, dir2, MODE_0);
         work(dir2, dir1, MODE_1);
         sleep(interval);
     }
+}
+
+void daemon::finish() {
+    is_finished = true;
+    syslog(LOG_NOTICE, "Daemon process was finished");
 }

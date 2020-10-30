@@ -4,16 +4,27 @@
 
 int main(int argc, char **argv) {
     std::string config_file_path;
+    openlog("daemon_lab", LOG_NOWAIT | LOG_PID, LOG_DAEMON);
+    syslog(LOG_NOTICE, "Log was opened");
     if (argc != 2) {
-        std:: cout << "ERROR: nums of args are not valid" << std::endl;
+        syslog(LOG_ERR, "ERROR: nums of args are not valid");
         return EXIT_FAILURE;
     }
     std::string conf_file= argv[1];
     daemon::set_config(conf_file);
-
-    if (daemon ::create() == EXIT_FAILURE){
+    try{
+        if (!daemon ::create()){
+            syslog(LOG_NOTICE, "Parent process was ended");
+            return EXIT_SUCCESS; // end parent process
+        }
+        daemon::run();
+    }
+    catch (std::runtime_error const &ex) {
+        syslog(LOG_ERR, "Runtime error: %s", ex.what());
+        closelog();
         return EXIT_FAILURE;
     }
-    daemon ::run();
+    closelog();
+
     return EXIT_SUCCESS;
 }
