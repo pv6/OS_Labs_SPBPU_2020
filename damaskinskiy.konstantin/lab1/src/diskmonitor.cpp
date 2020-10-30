@@ -42,7 +42,7 @@ bool DiskMonitor::start()
         default:
             waitpid(pid, &status, 0);
             if (WIFEXITED(status))
-                syslog(LOG_LOCAL0, "Initially-forked process normally exited with code: %i",
+                syslog(LOG_INFO, "Initially-forked process normally exited with code: %i",
                        WEXITSTATUS(status));
             else
                 syslog(LOG_ERR, "Some error when exiting initially-forked process");
@@ -61,15 +61,15 @@ bool DiskMonitor::start()
         case -1:
             throw std::runtime_error("Work process fork failed");
         case 0:
-            syslog(LOG_LOCAL0, "Created child work process");
+            syslog(LOG_INFO, "Created child work process");
             handlePidFile();
             workLoop();
-            syslog(LOG_LOCAL0, "Exit parent process");
+            syslog(LOG_INFO, "Exit parent process");
             break;
         default:
             waitpid(pid, &status, 0);
             if (WIFEXITED(status))
-                syslog(LOG_LOCAL0, "Secondary-forked process normally exited with code: %i",
+                syslog(LOG_INFO, "Secondary-forked process normally exited with code: %i",
                        WEXITSTATUS(status));
             else
                 syslog(LOG_ERR, "Some error when exiting secondary-forked process");
@@ -95,10 +95,10 @@ DiskMonitor & DiskMonitor::get()
 void DiskMonitor::workLoop()
 {
      run = true;
-     syslog(LOG_LOCAL0, "Start work loop");
+     syslog(LOG_INFO, "Start work loop");
      while (run)
          work();
-     syslog(LOG_LOCAL0, "Finish work loop: run flag == false");
+     syslog(LOG_INFO, "Finish work loop: run flag == false");
 }
 
 void DiskMonitor::work()
@@ -124,7 +124,7 @@ void DiskMonitor::handlePidFile()
         if (std::filesystem::exists(path_to_old))
             kill(pid, SIGTERM);
         else
-            syslog(LOG_LOCAL0, "First run or incorrect PID");
+            syslog(LOG_INFO, "First run or incorrect PID");
     }
 
     std::ofstream pid_ofs(pidFile);
@@ -150,10 +150,10 @@ void DiskMonitor::signalHandle(int sigType)
         }
         break;
     case SIGTERM:
-        syslog(LOG_LOCAL0, "%s", "SIGTERM: finishing DM daemon");
+        syslog(LOG_INFO, "%s", "SIGTERM: finishing DM daemon");
         instance.run = false;
         break;
     default:
-        syslog(LOG_LOCAL0, "Unhandled signal catched: %d", sigType);
+        syslog(LOG_INFO, "Unhandled signal catched: %d", sigType);
     }
 }
