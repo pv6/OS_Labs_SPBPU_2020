@@ -1,8 +1,8 @@
 #pragma once
 #include "my_daemon.h"
 
-struct Handler {
-    inline static DaemonBase * _pDaemon;
+namespace Handler {
+    static DaemonBase * _pDaemon;
     static void SignalHandler(int sig)
     {
         if (!_pDaemon){
