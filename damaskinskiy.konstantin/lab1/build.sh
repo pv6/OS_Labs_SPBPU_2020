@@ -3,6 +3,7 @@ PID_FILE="/var/run/dm_kd.pid"
 if [ ! -f $PID_FILE ]; then
 	sudo touch $PID_FILE
 	sudo chmod +rw $PID_FILE
+	sudo chown $(id -u):$(id -g) $PID_FILE
 	echo PID file created
 fi
 

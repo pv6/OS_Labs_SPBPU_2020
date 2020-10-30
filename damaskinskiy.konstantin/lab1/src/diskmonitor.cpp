@@ -18,9 +18,6 @@ void DiskMonitor::init(const std::string &configName)
 
 bool DiskMonitor::start()
 {
-    if (fork() == -1)
-        throw std::runtime_error("Start fork failed");
-
     // open system log
     openlog(tag.c_str(), LOG_PID | LOG_NDELAY | LOG_PERROR, LOG_LOCAL0);
 
@@ -40,12 +37,6 @@ bool DiskMonitor::start()
             // Inside child process
             break;
         default:
-            waitpid(pid, &status, 0);
-            if (WIFEXITED(status))
-                syslog(LOG_INFO, "Initially-forked process normally exited with code: %i",
-                       WEXITSTATUS(status));
-            else
-                syslog(LOG_ERR, "Some error when exiting initially-forked process");
             // Inside parent process
             return true;
         }
@@ -67,12 +58,6 @@ bool DiskMonitor::start()
             syslog(LOG_INFO, "Exit parent process");
             break;
         default:
-            waitpid(pid, &status, 0);
-            if (WIFEXITED(status))
-                syslog(LOG_INFO, "Secondary-forked process normally exited with code: %i",
-                       WEXITSTATUS(status));
-            else
-                syslog(LOG_ERR, "Some error when exiting secondary-forked process");
             break;
         }
     }
@@ -83,7 +68,6 @@ bool DiskMonitor::start()
         return false;
     }
 
-    closelog();
     return true;
 }
 
@@ -115,7 +99,6 @@ void DiskMonitor::handlePidFile()
     {
         pid_t pid;
         pid_ifs >> pid;
-        pid_ifs.close();
 
         // find old process
         std::string path_to_old = "/proc/" + std::to_string(pid);
@@ -127,7 +110,8 @@ void DiskMonitor::handlePidFile()
             syslog(LOG_INFO, "First run or incorrect PID");
     }
 
-    std::ofstream pid_ofs(pidFile);
+    std::ofstream pid_ofs;
+    pid_ofs.open(pidFile, std::ofstream::out | std::ofstream::trunc);
     if (!pid_ofs)
         throw std::runtime_error("Could not open PID file for writing");
     pid_ofs << getpid() << "\n";
@@ -142,7 +126,7 @@ void DiskMonitor::signalHandle(int sigType)
         try
         {
             instance.config.load();
-            instance.run = false;
+            syslog(LOG_INFO, "Config reload");
         }
         catch (std::exception &exception)
         {

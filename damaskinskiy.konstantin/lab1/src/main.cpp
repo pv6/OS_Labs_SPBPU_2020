@@ -11,6 +11,7 @@ int main( int argc, char **argv )
 
     auto &dm = DiskMonitor::get();
     dm.init(argv[1]);
-    return !dm.start();
+    auto flag = !dm.start();
+    return flag;
 }
 
