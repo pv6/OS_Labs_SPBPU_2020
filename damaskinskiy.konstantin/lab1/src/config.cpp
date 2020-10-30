@@ -6,6 +6,8 @@ Config::Config( std::string const &configName ) :
     configName(configName)
 {}
 
+void Config::setName(const std::string &configName) { this->configName = configName;}
+
 void Config::load()
 {
     std::ifstream ifs(configName);
@@ -27,4 +29,9 @@ void Config::load()
         }
     }
     ifs.close();
+}
+
+std::vector<std::string> const& Config::getDirectories() const
+{
+    return directories;
 }

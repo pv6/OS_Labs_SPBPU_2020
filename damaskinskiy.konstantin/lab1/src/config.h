@@ -7,9 +7,12 @@
 class Config
 {
 public:
-    explicit Config( std::string const &configName );
+    Config() {}
+    void setName( std::string const &configName );
+    Config( std::string const &configName );
 
     void load();
+    std::vector<std::string> const& getDirectories() const;
 private:
     std::string configName;
     std::vector<std::string> directories;

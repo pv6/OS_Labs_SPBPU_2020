@@ -1,5 +1,5 @@
 #include <iostream>
-#include "config.h"
+#include "diskmonitor.h"
 
 int main( int argc, char **argv )
 {
@@ -9,8 +9,8 @@ int main( int argc, char **argv )
         return 1;
     }
 
-    Config config(argv[1]);
-	std::cout << "Hello world\n";
-	return 0;
+    auto &dm = DiskMonitor::get();
+    dm.init(argv[1]);
+    return !dm.start();
 }
 
