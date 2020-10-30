@@ -27,8 +27,7 @@ bool DiskMonitor::start()
 
     try
     {
-        int pid, status;
-        switch (pid = fork())
+        switch (fork())
         {
         case -1:
             syslog(LOG_ERR, "Initial fork failed");
@@ -43,8 +42,7 @@ bool DiskMonitor::start()
 
         config.load();
 
-        int pid2;
-        switch (pid2 = fork())
+        switch (fork())
         {
         case -1:
             throw std::runtime_error("Work process fork failed");
