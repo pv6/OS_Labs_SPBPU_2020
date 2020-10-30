@@ -41,9 +41,6 @@ bool DiskMonitor::start()
             return true;
         }
 
-        if (setsid() == -1)
-            throw std::runtime_error("setsid fail. errno: " + std::to_string(errno));
-
         config.load();
 
         int pid2;
@@ -60,6 +57,9 @@ bool DiskMonitor::start()
         default:
             break;
         }
+
+        if (setsid() == -1)
+            throw std::runtime_error("setsid fail. errno: " + std::to_string(errno));
     }
     catch (std::exception &exception)
     {
