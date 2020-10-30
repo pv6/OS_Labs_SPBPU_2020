@@ -24,6 +24,7 @@ private:
     static void signalHandle( int sigType );
 
     Config config;
+    std::vector<std::string> watchDirectories;
     bool run; // true if work loop is available
     static DiskMonitor instance;
 };

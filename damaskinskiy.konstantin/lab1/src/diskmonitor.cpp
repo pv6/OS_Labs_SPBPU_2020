@@ -42,6 +42,7 @@ bool DiskMonitor::start()
         }
 
         config.load();
+        watchDirectories = config.getDirectories();
 
         switch (fork())
         {
@@ -126,6 +127,7 @@ void DiskMonitor::signalHandle(int sigType)
         try
         {
             instance.config.load();
+            instance.watchDirectories = instance.config.getDirectories();
             syslog(LOG_INFO, "Config reload");
         }
         catch (std::exception &exception)
