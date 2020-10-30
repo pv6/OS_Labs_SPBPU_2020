@@ -37,6 +37,7 @@ bool DiskMonitor::start()
             break;
         default:
             // Inside parent process
+            syslog(LOG_INFO, "Exit parent 0 process");
             return true;
         }
 
@@ -50,9 +51,10 @@ bool DiskMonitor::start()
             syslog(LOG_INFO, "Created child work process");
             handlePidFile();
             workLoop();
-            syslog(LOG_INFO, "Exit parent process");
+            syslog(LOG_INFO, "Exit main process");
             break;
         default:
+            syslog(LOG_INFO, "Exit parent 1 process");
             break;
         }
 

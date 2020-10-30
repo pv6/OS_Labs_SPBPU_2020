@@ -16,7 +16,8 @@ cd ..
 rm -rf `find build ! -name "DiskMonitor" ! -name "*.conf" ! -name build`
 
 #set LOCAL0
-LOCAL0DIR="local0.* /var/log/dm_kd.log"
+LOGADDR="/var/log/dm_kd.log"
+LOCAL0DIR="local0.* $LOGADDR" 
 SYSLOG="/etc/rsyslog.conf"
 
 if [[ -z `cat "$SYSLOG" | grep "$LOCAL0DIR"` ]]; then
