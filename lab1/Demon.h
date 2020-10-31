@@ -23,7 +23,7 @@ public:
     void createDemon();
     static void kill_last_daemon();
     static void signal_handler(int signum);
-    int deleteSubFolders(std::string path, int deepLevel);
+    int deleteSubFolders(std::string &path, int deepLevel);
     void runDemon();
 private:
     static NeededInfo *nf;

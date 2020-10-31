@@ -81,7 +81,7 @@ void Demon::signal_handler(int signum) {
         exit(0);
     }
 }
-int Demon::deleteSubFolders(std::string path, int deepLevel){
+int Demon::deleteSubFolders(std::string &path, int deepLevel){
     if(path.empty()){
         std::cout << "bad path" << std::endl;
         return EXIT_FAILURE;
@@ -106,7 +106,7 @@ int Demon::deleteSubFolders(std::string path, int deepLevel){
         if(S_ISDIR(st.st_mode)){
             char test = next_file->d_name[0];
             if(test != '.'){
-                deleteSubFolders(filepath, ++deepLevel);
+                deleteSubFolders(reinterpret_cast<std::string &>(filepath), ++deepLevel);
                 deepLevel--;
             }
         }

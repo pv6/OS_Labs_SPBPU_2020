@@ -3,6 +3,7 @@
 //
 #ifndef UNTITLED1_SUBMETHODS_H
 #define UNTITLED1_SUBMETHODS_H
+#include <iostream>
 #include <string>
 #include "NeededInfo.h"
 class SubMethods{
