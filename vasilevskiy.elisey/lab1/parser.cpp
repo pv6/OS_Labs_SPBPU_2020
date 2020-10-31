@@ -8,10 +8,8 @@ const std::string Parser::input = "in_dir";
 const std::string Parser::output = "out_dir";
 const std::string Parser::extension = "extension";
 
-void putIfNew(Parser::Param param,
-              const std::string &name,
-              const std::string &value,
-              std::map<Parser::Param, std::string>& result) {
+void Parser::putIfNew(Parser::Param param, const std::string &name, const std::string &value,
+                      std::map<Parser::Param, std::string> &result) {
     if (result.find(param) != result.end()) {
         throw std::runtime_error("Duplicate config name:" + name + value);
     }

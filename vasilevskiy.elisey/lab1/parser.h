@@ -17,6 +17,10 @@ public:
     static std::map<Parser::Param, std::string> parseConfig(const std::string &confingFile);
 
 private:
+    static void putIfNew(Parser::Param param,
+                  const std::string &name,
+                  const std::string &value,
+                  std::map<Parser::Param, std::string>& result);
     static const int configSize;
     static const std::string separator;
     static const std::string intval;
