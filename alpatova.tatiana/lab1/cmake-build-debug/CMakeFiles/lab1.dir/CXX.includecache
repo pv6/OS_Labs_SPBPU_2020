@@ -1,0 +1,46 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/tani/work/labs/OS_Labs_SPBPU_2020/alpatova.tatiana/lab1/daemon.cpp
+daemon.h
+/home/tani/work/labs/OS_Labs_SPBPU_2020/alpatova.tatiana/lab1/daemon.h
+
+/home/tani/work/labs/OS_Labs_SPBPU_2020/alpatova.tatiana/lab1/daemon.h
+string
+-
+fstream
+-
+syslog.h
+-
+unistd.h
+-
+cstdlib
+-
+iostream
+-
+csignal
+-
+ctime
+-
+dirent.h
+-
+fcntl.h
+-
+sys/sendfile.h
+-
+sys/stat.h
+-
+
+/home/tani/work/labs/OS_Labs_SPBPU_2020/alpatova.tatiana/lab1/main.cpp
+string
+-
+iostream
+-
+daemon.h
+/home/tani/work/labs/OS_Labs_SPBPU_2020/alpatova.tatiana/lab1/daemon.h
+

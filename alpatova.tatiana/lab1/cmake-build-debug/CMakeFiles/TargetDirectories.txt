@@ -1,0 +1,3 @@
+/home/tani/work/labs/OS_Labs_SPBPU_2020/alpatova.tatiana/lab1/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/tani/work/labs/OS_Labs_SPBPU_2020/alpatova.tatiana/lab1/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/tani/work/labs/OS_Labs_SPBPU_2020/alpatova.tatiana/lab1/cmake-build-debug/CMakeFiles/lab1.dir
