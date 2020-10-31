@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pidFilePath="/var/run/lab1.pid"
+pidFilePath="/var/run/daemon.pid"
 
 [[ -f pidFilePath ]] || sudo touch "$pidFilePath"
 

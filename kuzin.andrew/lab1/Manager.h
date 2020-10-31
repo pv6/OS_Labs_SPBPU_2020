@@ -8,36 +8,40 @@
 
 class Manager {
 public:
-    static Manager& getInstance();
+    static Manager &getInstance();
 
     void run();
+
 private:
     Manager();
-    Manager(Manager const&);
-    Manager& operator= (Manager const&);
+
+    Manager(Manager const &);
+
+    Manager &operator=(Manager const &);
 
     std::list<std::string> commandList_;
     std::list<std::string> testEventList_;
 
-    enum
-    {
+    enum {
         COMMAND_ADD_EVENT,
         COMMAND_PRINT_CONFIG_AND_CHECK,
         COMMAND_RUN_DAEMON,
         COMMAND_EXIT
     } COMMAND;
 
-    static void writeToConfigFile(std::string &eventDate, std::string &eventTime, std::string &eventFlag, std::string &eventText);
+    static void
+    writeToConfigFile(const std::string &eventDate, const std::string &eventTime, const std::string &eventFlag,
+                      const std::string &eventText);
 
     void addEvent();
 
-    bool checkEventDateAndTime(std::string &eventDate, std::string &eventTime, bool needWriteToConsole);
+    bool checkEventDateAndTime(const std::string &eventDate, const std::string &eventTime, bool needWriteToConsole);
 
     void printCommandList();
 
     void printConfigFile();
 
-    void runDaemon();
+    static void runDaemon();
 
 };
 

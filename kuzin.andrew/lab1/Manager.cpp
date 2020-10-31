@@ -109,17 +109,16 @@ void Manager::printConfigFile()
     }
 }
 
-void Manager::writeToConfigFile(std::string &eventDate, std::string &eventTime, std::string &eventFlag, std::string &eventText)
+void Manager::writeToConfigFile(const std::string &eventDate, const std::string &eventTime, const std::string &eventFlag, const std::string &eventText)
 {
     std::ofstream fOut(CONFIG_NAME, std::ios::app);
-    if (fOut.is_open())
-    {
+    if (fOut.is_open()) {
         fOut << eventDate << " " << eventTime << " " << eventFlag << " " << eventText << std::endl;
     }
     fOut.close();
 }
 
-bool Manager::checkEventDateAndTime(std::string &eventDate, std::string &eventTime, bool needWriteToConsole)
+bool Manager::checkEventDateAndTime(const std::string &eventDate, const std::string &eventTime, bool needWriteToConsole)
 {
     size_t n = testEventList_.size();
     bool* test = new bool[n] {false};
@@ -136,6 +135,10 @@ bool Manager::checkEventDateAndTime(std::string &eventDate, std::string &eventTi
     {
         test[1] = true;
     }
+
+    t.tm_year -= 1900;
+    t.tm_mon -= 1;
+    t.tm_isdst = -1;
 
     //Test 3
     tm tCheck = t;
@@ -156,7 +159,7 @@ bool Manager::checkEventDateAndTime(std::string &eventDate, std::string &eventTi
         {
             if (needWriteToConsole)
             {
-                std::cout << "Test " << index << " - " << errorName << std::endl;
+                std::cout << "Test " << index + 1 << " - " << errorName << std::endl;
             }
             isIncorrectEvent = true;
         }
