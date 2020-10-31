@@ -8,7 +8,7 @@ if [ ! -f $PID_FILE ]; then
 fi
 
 #make
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -B build -DCMAKE_BUILD_TYPE=Release
 cd build && make
 cd ..
 
