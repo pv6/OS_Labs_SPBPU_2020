@@ -13,7 +13,9 @@ public:
 
     void load();
     std::vector<std::string> const& getDirectories() const;
+    size_t getMaxEvents() const;
 private:
+    size_t maxEvents = 100;
     std::string configName;
     std::vector<std::string> directories;
 };

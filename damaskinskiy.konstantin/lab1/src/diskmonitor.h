@@ -3,6 +3,7 @@
 
 #include <string>
 #include <memory>
+#include <unordered_map>
 #include "config.h"
 
 class DiskMonitor
@@ -12,11 +13,18 @@ public:
     bool start();
     static DiskMonitor & get();
 private:
+    void runAll();
+
     DiskMonitor(){}
     void workLoop();
     void work();
 
     void handlePidFile();
+
+    void fail( std::exception &&exc );
+
+    void buildWatchDescrToPath();
+    void removeWatches();
 
     const std::string tag = "DM_KD";
     const std::string pidFile = "/var/run/dm_kd.pid";
@@ -24,8 +32,15 @@ private:
     static void signalHandle( int sigType );
 
     Config config;
+    std::unordered_map<int, std::string> watchDescrToPath;
     std::vector<std::string> watchDirectories;
+    size_t eventsCount;
     bool run; // true if work loop is available
+    int inotifyDescr = -1;
+
+    char *events = nullptr;
+    size_t bufferSize;
+
     static DiskMonitor instance;
 };
 
