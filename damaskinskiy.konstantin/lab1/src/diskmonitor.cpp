@@ -30,8 +30,8 @@ bool DiskMonitor::start()
     for (int i = getdtablesize(); i >= 0; --i)
         close(i);
     int i = open("/dev/null", O_RDWR);
-    dup(i); //in
-    dup(i); //out
+    auto rc = dup(i); //in
+    rc = dup(i); //out
 
     syslog(LOG_INFO, "Closed all file descriptors before starting");
 
