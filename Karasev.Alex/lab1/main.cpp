@@ -12,11 +12,12 @@ int main(int argc, char** argv)
 
     openlog ("Daemon_log.log", LOG_PID, LOG_DAEMON);
     try {
-        Daemon* daemon = new Daemon(argv[1]);
+        if (!Daemon::init(argv[1]))
+            return 0;
+        Daemon::run();
     } catch (std::runtime_error& re) {
         syslog(LOG_ERR, "%s", re.what());
     }
-    Daemon::run();
 
     syslog (LOG_NOTICE, "Daemon terminated");
     closelog();

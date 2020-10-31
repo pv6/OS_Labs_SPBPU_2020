@@ -6,13 +6,13 @@
 #include "Daemon.h"
 #include "Parser.h"
 
-std::string pid_file_path = "/var/run/daemon_pid.pid";
+std::string Daemon::pid_file_path = "/var/run/daemon_pid.pid";
 std::vector<std::string> Daemon::folds;
 std::string Daemon::config_file;
 bool Daemon::proceed = true;
 char Daemon::dir_home_path [PATH_LENGTH];
 
-Daemon::Daemon(const char* FileName) {
+void Daemon::set_config(const char* FileName) {
     if (getcwd(dir_home_path, PATH_LENGTH) == nullptr) {
         throw std::runtime_error("Couldn't open current directory");
     }
@@ -60,7 +60,7 @@ void Daemon::signal_handler(int sig) {
     }
 }
 
-void Daemon::copy_file(std::string src_path, std::string dest_path) {
+void Daemon::copy_file(const std::string& src_path, const std::string& dest_path) {
     std::ifstream from(src_path.c_str(), std::ios::binary);
     std::ofstream to(dest_path.c_str(), std::ios::binary);
     to << from.rdbuf();
@@ -121,15 +121,14 @@ bool Daemon::work() {
 }
 
 void Daemon::run() {
-    if (!init())
-        return;
     while(proceed && work()) {
         syslog(LOG_NOTICE, "Working...");
         sleep (WaitTime);
     }
 }
 
-bool Daemon::init() {
+bool Daemon::init(const char* FileName) {
+    set_config(FileName);
     pid_t pid;
     pid = fork();
     if (pid < 0) {
