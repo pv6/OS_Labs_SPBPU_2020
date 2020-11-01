@@ -19,10 +19,15 @@ class Daemon
 {
 public:
     void execute();
-    static Daemon* get_instance(const char*);
+    static Daemon* init(int argc,char **argv);
     static void signal_handler(int sig);
 private:
     Daemon(const char* cfg_path);
+    static void check_args(int argc);
+    static void do_fork();
+    static void change_dir();
+    static void close_streams();
+    static Daemon* get_instance(const char*);
     void kill_prev_instance();
     void read_config();
     void print_event_text(const std::string&);
