@@ -16,6 +16,8 @@ private:
     void runAll();
 
     DiskMonitor(){}
+    DiskMonitor(DiskMonitor const&) = delete;
+    DiskMonitor & operator=(DiskMonitor const&) = delete;
     void workLoop();
     void work();
 

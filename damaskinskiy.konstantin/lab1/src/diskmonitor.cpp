@@ -24,28 +24,6 @@ bool DiskMonitor::start()
     // open system log
     openlog(tag.c_str(), LOG_PID | LOG_NDELAY | LOG_PERROR, LOG_LOCAL0);
 
-    umask(027);
-
-    // close all owned file desrciptors
-    for (int i = getdtablesize(); i >= 0; --i)
-        close(i);
-    int i = open("/dev/null", O_RDWR);
-    auto rc = dup(i); //in
-    rc = dup(i); //out
-
-    syslog(LOG_INFO, "Closed all file descriptors before starting");
-
-    if ((inotifyDescr = inotify_init()) < 0)
-    {
-        syslog(LOG_ERR, "Could not initialize inotify");
-        return false;
-    }
-    syslog(LOG_INFO, "Created inotify descriptor");
-
-
-    signal(SIGTERM, signalHandle);
-    signal(SIGHUP, signalHandle);
-
     try
     {
         switch (fork())
@@ -62,25 +40,49 @@ bool DiskMonitor::start()
             return true;
         }
 
+        if (setsid() == -1)
+            fail(std::runtime_error("setsid fail. errno: " + std::to_string(errno)));
+
         switch (fork())
         {
         case -1:
             fail(std::runtime_error("Work process fork failed"));
             break;
         case 0:
+        {
             syslog(LOG_INFO, "Created child work process");
+
+            umask(027);
+
+            // close all owned file desrciptors
+            for (int i = getdtablesize(); i >= 0; --i)
+                close(i);
+            int i = open("/dev/null", O_RDWR);
+            auto rc = dup(i); //in
+            rc = dup(i); //out
+
+            syslog(LOG_INFO, "Closed all file descriptors before starting");
+
+            if ((inotifyDescr = inotify_init()) < 0)
+            {
+                syslog(LOG_ERR, "Could not initialize inotify");
+                return false;
+            }
+            syslog(LOG_INFO, "Created inotify descriptor");
+
+            signal(SIGTERM, signalHandle);
+            signal(SIGHUP, signalHandle);
+
             handlePidFile();
             runAll();
             workLoop();
             syslog(LOG_INFO, "Exit main process");
             break;
+        }
         default:
             syslog(LOG_INFO, "Exit parent 1 process");
             break;
         }
-
-        if (setsid() == -1)
-            fail(std::runtime_error("setsid fail. errno: " + std::to_string(errno)));
     }
     catch (std::exception &exception)
     {
