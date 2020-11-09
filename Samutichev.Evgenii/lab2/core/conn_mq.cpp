@@ -27,9 +27,10 @@ namespace {
     ConnectionImpl::ConnectionImpl(size_t id, bool create) {
         _id = "/mq_" + std::to_string(id);
         _creator = create;
+
         if (create) {
             mq_attr attr = {0, 1, sizeof(int), 0 };
-            _descr = mq_open(_id.c_str(), O_CREAT | O_RDWR, permissions, attr);
+            _descr = mq_open(_id.c_str(), O_CREAT | O_RDWR, permissions, &attr);
             if (_descr == (mqd_t)-1)
                 throw MyException("Failed to create message queue, error code " + std::to_string(errno), MyException::Type::CRITICAL);
         }
@@ -42,13 +43,13 @@ namespace {
 
     int ConnectionImpl::read() const {
         int msg;
-        if (mq_receive(_descr, (char*)&msg, sizeof(int), NULL) == -1)
+        if (mq_receive(_descr, (char*)&msg, sizeof(int), 0) == -1)
             throw MyException("Failed to read message from MQ, error code " + std::to_string(errno), MyException::Type::CRITICAL);
         return msg;
     }
 
     void ConnectionImpl::write(int msg) const {
-        if (mq_send(_descr, (char*)&msg, sizeof(int), NULL) == -1)
+        if (mq_send(_descr, (char*)&msg, sizeof(int), 0) == -1)
             throw MyException("Failed to write to the MQ, error code " + std::to_string(errno), MyException::Type::CRITICAL);
     }
 
@@ -63,6 +64,6 @@ namespace {
     }
 }
 
-Connection* create(size_t id, bool create) {
+Connection* Connection::create(size_t id, bool create) {
     return new (std::nothrow) ConnectionImpl(id, create);
 }
