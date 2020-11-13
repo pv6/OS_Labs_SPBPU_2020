@@ -94,6 +94,7 @@ bool Daemon::daemonize() const {
     pid_ifstream.open(m_path_pidf.c_str(), std::ifstream::in);
     if (pid_ifstream.good()) {
         int existing_pid;
+        // TODO: there's smth wrong
         if (!(pid_ifstream >> existing_pid)) {
             syslog(LOG_WARNING, "pid file might be corrupted");
         }
