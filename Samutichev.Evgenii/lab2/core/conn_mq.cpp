@@ -1,5 +1,5 @@
 #include "conn.h"
-#include "my_exception.h"
+#include "sys_exception.h"
 #include <mqueue.h>
 #include <new>
 #include <string>
@@ -8,6 +8,7 @@
 #include <syslog.h>
 
 const mode_t permissions = 0666;
+const char* prefix = "/mq_";
 
 namespace {
     class ConnectionImpl : public Connection {
@@ -25,32 +26,32 @@ namespace {
     };
 
     ConnectionImpl::ConnectionImpl(size_t id, bool create) {
-        _id = "/mq_" + std::to_string(id);
+        _id = prefix + std::to_string(id);
         _creator = create;
 
         if (create) {
             mq_attr attr = {0, 1, sizeof(int), 0 };
             _descr = mq_open(_id.c_str(), O_CREAT | O_RDWR, permissions, &attr);
             if (_descr == (mqd_t)-1)
-                throw MyException("Failed to create message queue, error code " + std::to_string(errno), MyException::Type::CRITICAL);
+                throw SysException("Failed to create message queue", errno);
         }
         else {
             _descr = mq_open(_id.c_str(), O_RDWR);
             if (_descr == (mqd_t)-1)
-                throw MyException("Failed to open message queue, error code " + std::to_string(errno), MyException::Type::CRITICAL);
+                throw SysException("Failed to open message queue", errno);
         }
     }
 
     int ConnectionImpl::read() const {
         int msg;
         if (mq_receive(_descr, (char*)&msg, sizeof(int), 0) == -1)
-            throw MyException("Failed to read message from MQ, error code " + std::to_string(errno), MyException::Type::CRITICAL);
+            throw SysException("Failed to read message from MQ", errno);
         return msg;
     }
 
     void ConnectionImpl::write(int msg) const {
         if (mq_send(_descr, (char*)&msg, sizeof(int), 0) == -1)
-            throw MyException("Failed to write to the MQ, error code " + std::to_string(errno), MyException::Type::CRITICAL);
+            throw SysException("Failed to write to the MQ", errno);
     }
 
     ConnectionImpl::~ConnectionImpl() {
