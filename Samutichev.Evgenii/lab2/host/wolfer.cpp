@@ -4,11 +4,29 @@
 #include <stdlib.h>
 
 Wolfer::Wolfer() {
-    srand(time(NULL));
     _wolferNumber = 0;
+    _goatlingStatus = Game::aliveCode;
+    _gameOver = false;
+    _deadTurns = 0;
 }
 
-int Wolfer::processAliveGoatling(int number) {
+int Wolfer::processGoatling(int number) {
+    if (_goatlingStatus == Game::aliveCode)
+        _goatlingStatus = processAlive(number);
+    else
+        _goatlingStatus = processDead(number);
+
+    if (_deadTurns > Game::turnsToGameOver && _goatlingStatus != Game::errorCode)
+        _gameOver = true;
+
+    return _goatlingStatus;
+}
+
+bool Wolfer::gameOver() const {
+    return _gameOver;
+}
+
+int Wolfer::processAlive(int number) {
     if (number > Game::aliveNumMax || number < 1)
         return Game::errorCode;
 
@@ -18,16 +36,23 @@ int Wolfer::processAliveGoatling(int number) {
         return Game::deadCode;
 }
 
-int Wolfer::processDeadGoatling(int number) {
+int Wolfer::processDead(int number) {
     if (number > Game::deadNumMax || number < 1)
         return Game::errorCode;
 
-    if (abs(number - _wolferNumber) <= Game::ressurectionGap)
+    if (abs(number - _wolferNumber) <= Game::ressurectionGap) {
+        _deadTurns = 0;
         return Game::aliveCode;
-    else
+    }
+    else {
+        _deadTurns++;
         return Game::deadCode;
+    }
 }
 
-void Wolfer::generateWolferNumber() {
-    _wolferNumber = (rand() % Game::wolferNumMax) + 1;
+bool Wolfer::setWolferNumber(int number) {
+    if (number > Game::wolferNumMax || number < 1)
+        return false;
+    _wolferNumber = number;
+    return true;
 }

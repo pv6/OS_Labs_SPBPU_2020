@@ -1,7 +1,8 @@
 #ifndef MY_HOST_H_INCLUDED
 #define MY_HOST_H_INCLUDED
 #include "../core/conn.h"
-#include <semaphore.h>
+#include "wolfer.h"
+#include "../core/my_semaphore.h"
 
 class Host {
 public:
@@ -19,9 +20,10 @@ private:
     void work();
 
     Connection* _conn;
-    sem_t* _hostSem;
-    sem_t* _clientSem;
+    Semaphore _hostSem;
+    Semaphore _clientSem;
     size_t _currentTurn;
+    Wolfer _wolfer;
 };
 
 #endif // MY_HOST_H_INCLUDED

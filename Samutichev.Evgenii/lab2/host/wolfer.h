@@ -5,12 +5,19 @@ class Wolfer {
 public:
     Wolfer();
 
-    int processAliveGoatling(int number);
-    int processDeadGoatling(int number);
-    void generateWolferNumber();
+    bool setWolferNumber(int number);
+    int processGoatling(int number);
+    bool gameOver() const;
 
 private:
+    int processAlive(int number);
+    int processDead(int number);
+
     int _wolferNumber;
+    int _goatlingStatus;
+    int _deadTurns;
+    bool _gameOver;
+
 };
 
 #endif // WOLF_H_INCLUDED

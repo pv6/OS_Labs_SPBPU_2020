@@ -57,11 +57,6 @@ namespace {
     ConnectionImpl::~ConnectionImpl() {
         if (mq_close(_descr) == -1)
             syslog(LOG_ERR, "An unhandled exception occured while closing MQ descriptor %d", _descr);
-
-        if (_creator) {
-            if (mq_unlink(_id.c_str()) == -1)
-                syslog(LOG_ERR, "An unhandled exception occured while removing MQ %s", _id.c_str());
-        }
     }
 }
 
