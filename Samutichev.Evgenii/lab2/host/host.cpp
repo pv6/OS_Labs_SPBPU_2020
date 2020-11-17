@@ -10,7 +10,7 @@ int main() {
         host = Host::get();
         host->run();
     } catch (const SysException& ex) {
-        syslog(LOG_ERR, ex.what());
+        syslog(LOG_ERR, "%s", ex.what());
         std::cout << "An error occured, see syslog for details\n";
     }
     delete host;
