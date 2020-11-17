@@ -7,7 +7,6 @@
 #include <syslog.h>
 
 Semaphore::Semaphore(const char* name) {
-    _creator = true;
     _name = name;
 
     int memDescr = shm_open(_name.c_str(), O_RDWR | O_CREAT, S_IRWXU);
@@ -23,15 +22,6 @@ Semaphore::Semaphore(const char* name) {
 
     if (sem_init(_sem, 1, 0) == -1)
         throw SysException("Failed to initialize semaphore", errno);
-}
-
-Semaphore::Semaphore(const Semaphore& other) {
-    int temp;
-    if (sem_getvalue(other._sem, &temp) == -1)
-        throw SysException("Semaphore doesn't exist", errno);
-    _creator = false;
-    _name = other._name;
-    _sem = other._sem;
 }
 
 void Semaphore::wait() {
@@ -62,8 +52,6 @@ void Semaphore::post() {
 }
 
 Semaphore::~Semaphore() {
-    if (_creator) {
-        sem_destroy(_sem);
-        shm_unlink(_name.c_str());
-    }
+    sem_destroy(_sem);
+    shm_unlink(_name.c_str());
 }

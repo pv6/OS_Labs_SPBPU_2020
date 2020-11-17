@@ -7,22 +7,21 @@
 
 const mode_t permissions = 0666;
 
-Client::Client(size_t connectionID, Semaphore hostSem, Semaphore clientSem)
-    : _hostSem(hostSem), _clientSem(clientSem) {
+Client::Client(size_t connectionID) {
     _conn = Connection::create(connectionID, false);
 }
 
-void Client::work() {
+void Client::run(Semaphore& hostSem, Semaphore& clientSem) {
     while(true) {
-        _clientSem.wait();
+        clientSem.wait();
 
         int temp = _goatling.responseToWolf();
         syslog(LOG_NOTICE, "  G %d", temp);
         _conn->write(temp);
-        
-        _hostSem.post();
-        _clientSem.wait();
-        
+
+        hostSem.post();
+        clientSem.wait();
+
         temp = _conn->read();
         if (temp == Game::aliveCode)
             syslog(LOG_NOTICE, "  Alive");
@@ -30,7 +29,6 @@ void Client::work() {
             syslog(LOG_NOTICE, "  Dead");
         _goatling.setStatus(temp);
     }
-    _hostSem.post();
 }
 
 Client::~Client() {

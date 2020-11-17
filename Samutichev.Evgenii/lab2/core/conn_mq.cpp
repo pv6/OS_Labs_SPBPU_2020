@@ -22,41 +22,39 @@ namespace {
     private:
         mqd_t _descr;
         std::string _id;
-        bool _creator;
     };
 
     ConnectionImpl::ConnectionImpl(size_t id, bool create) {
         _id = prefix + std::to_string(id);
-        _creator = create;
 
         if (create) {
             mq_attr attr = {0, 1, sizeof(int), 0 };
             _descr = mq_open(_id.c_str(), O_CREAT | O_RDWR, permissions, &attr);
             if (_descr == (mqd_t)-1)
-                throw SysException("Failed to create message queue", errno);
+                throw SysException("Failed to create (MQ)", errno);
         }
         else {
             _descr = mq_open(_id.c_str(), O_RDWR);
             if (_descr == (mqd_t)-1)
-                throw SysException("Failed to open message queue", errno);
+                throw SysException("Failed to open (MQ)", errno);
         }
     }
 
     int ConnectionImpl::read() const {
         int msg;
         if (mq_receive(_descr, (char*)&msg, sizeof(int), 0) == -1)
-            throw SysException("Failed to read message from MQ", errno);
+            throw SysException("Failed to read message (MQ)", errno);
         return msg;
     }
 
     void ConnectionImpl::write(int msg) const {
         if (mq_send(_descr, (char*)&msg, sizeof(int), 0) == -1)
-            throw SysException("Failed to write to the MQ", errno);
+            throw SysException("Failed to write (MQ)", errno);
     }
 
     ConnectionImpl::~ConnectionImpl() {
         if (mq_close(_descr) == -1)
-            syslog(LOG_ERR, "An unhandled exception occured while closing MQ descriptor %d", _descr);
+            syslog(LOG_ERR, "An unhandled exception occured while closing descriptor %d (MQ)", _descr);
     }
 }
 

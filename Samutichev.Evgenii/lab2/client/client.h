@@ -6,15 +6,13 @@
 
 class Client {
 public:
-    Client(size_t connectionID, Semaphore hostSem, Semaphore clientSem);
+    Client(size_t connectionID);
     ~Client();
 
-    void work();
+    void run(Semaphore& hostSem, Semaphore& clientSem);
 
 private:
     Connection* _conn;
-    Semaphore _hostSem;
-    Semaphore _clientSem;
     Goatling _goatling;
 };
 

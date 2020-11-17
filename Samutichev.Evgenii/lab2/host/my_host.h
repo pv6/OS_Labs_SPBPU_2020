@@ -6,22 +6,16 @@
 
 class Host {
 public:
-    static Host* get();
+    Host(size_t connectionID);
     ~Host();
 
-    void run();
+    void run(Semaphore& hostSem, Semaphore& clientSem);
 
 private:
-    static Host* _instance;
-    Host();
     Host(const Host& other) = delete;
     Host& operator=(const Host& other) = delete;
 
-    void work();
-
     Connection* _conn;
-    Semaphore _hostSem;
-    Semaphore _clientSem;
     size_t _currentTurn;
     Wolfer _wolfer;
 };

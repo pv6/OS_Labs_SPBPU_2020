@@ -1,57 +1,26 @@
 #include "my_host.h"
 #include "../core/sys_exception.h"
 #include "../core/game_constants.h"
-#include "../client/client.h"
 #include <unistd.h>
 #include <iostream>
 #include <syslog.h>
 #include <errno.h>
 #include <time.h>
-#include <sys/types.h>
 #include <signal.h>
 
-Host* Host::_instance = nullptr;
-const size_t connID = 777;
-const char* hostSemName = "Wolfer";
-const char* clientSemName = "Goatling";
 const mode_t permissions = 0666;
 const time_t timeout = 5;
 
-Host* Host::get() {
-    if (_instance == nullptr)
-        _instance = new Host();
-    return _instance;
+Host::Host(size_t connectionID) {
+    _currentTurn = 1;
+    _conn = Connection::create(connectionID, true);
 }
 
 Host::~Host() {
     delete _conn;
 }
 
-Host::Host()
-    : _hostSem(hostSemName), _clientSem(clientSemName) {
-    _currentTurn = 1;
-    _conn = nullptr;
-}
-
-void Host::run() {
-    pid_t pid = fork();
-
-    if (pid < 0)
-        throw SysException("Failed to fork", errno);
-
-    if (pid == 0) {
-        sleep(1);
-        syslog(LOG_NOTICE, "Client process initialized");
-        Client(connID, _hostSem, _clientSem).work();
-    } else {
-        _conn = Connection::create(connID, true);
-        work();
-        kill(pid, SIGTERM);
-        syslog(LOG_NOTICE, "Child process terminated");
-    }
-}
-
-void Host::work() {
+void Host::run(Semaphore& hostSem, Semaphore& clientSem) {
     while(true) {
         printf("Turn %lu\n", _currentTurn);
         printf("Enter wolf number: ");
@@ -69,8 +38,8 @@ void Host::work() {
             continue;
         }
 
-        _clientSem.post();
-        if(!_hostSem.timedWait(timeout)) {
+        clientSem.post();
+        if(!hostSem.timedWait(timeout)) {
             printf("%ld seconds passed, no response from goatling!!!\n", timeout);
             break;
         }
@@ -88,6 +57,6 @@ void Host::work() {
         _conn->write(status);
 
         _currentTurn++;
-        _clientSem.post();
+        clientSem.post();
     }
 }

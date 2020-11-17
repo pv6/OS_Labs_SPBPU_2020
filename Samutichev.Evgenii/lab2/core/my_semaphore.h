@@ -7,7 +7,6 @@
 class Semaphore {
 public:
     Semaphore(const char* name);
-    Semaphore(const Semaphore& other);
     ~Semaphore();
 
     void wait();
@@ -15,9 +14,10 @@ public:
     void post();
 
 private:
+    Semaphore(const Semaphore& other) = delete;
+
     std::string _name;
     sem_t* _sem;
-    bool _creator;
 };
 
 #endif // MY_SEMAPHORE_H_INCLUDED
