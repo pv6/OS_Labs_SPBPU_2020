@@ -6,7 +6,7 @@
 #include <syslog.h>
 #include <unistd.h>
 
-const char* prefix = "/sock_";
+const char* prefix = "sock_";
 
 namespace {
     class ConnectionImpl : public Connection {
@@ -29,7 +29,7 @@ namespace {
         struct sockaddr_un addr;
         memset(&addr, 0, sizeof(struct sockaddr_un));
         addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, _id.c_str(), sizeof(addr.sun_path) - 1);
+        strcpy(addr.sun_path, _id.c_str());
 
         if (_creator) {
             _descr1 = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -46,6 +46,7 @@ namespace {
             if (_descr2 == -1)
                 throw SysException("Failed to accept connection (SOCK)", errno);
 
+            syslog(LOG_NOTICE, "CONN 1");
         } else {
             _descr2 = socket(AF_UNIX, SOCK_STREAM, 0);
             if (_descr2 == -1)
@@ -54,6 +55,7 @@ namespace {
             if (connect(_descr2, (struct sockaddr*)&addr, sizeof(struct sockaddr_un)) == -1)
                 throw SysException("Failed to connect (SOCK)", errno);
 
+            syslog(LOG_NOTICE, "CONN 2");
         }
     }
 
@@ -78,6 +80,8 @@ namespace {
         if (_creator) {
             if (close(_descr1) == -1)
                 syslog(LOG_ERR, "An unhandled exception occured while closing original socket handle %d (SOCKET)", _descr1);
+
+            unlink(_id.c_str());
         }
     }
 }

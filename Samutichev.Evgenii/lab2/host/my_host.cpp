@@ -30,7 +30,7 @@ Host::~Host() {
 Host::Host()
     : _hostSem(hostSemName), _clientSem(clientSemName) {
     _currentTurn = 1;
-    _conn = Connection::create(connID, true);
+    _conn = nullptr;
 }
 
 void Host::run() {
@@ -44,6 +44,7 @@ void Host::run() {
         syslog(LOG_NOTICE, "Client process initialized");
         Client(connID, _hostSem, _clientSem).work();
     } else {
+        _conn = Connection::create(connID, true);
         work();
         kill(pid, SIGTERM);
         syslog(LOG_NOTICE, "Child process terminated");
