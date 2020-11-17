@@ -6,3 +6,4 @@ endef
 
 build_all: 
 	$(call build,mq)
+	$(call build,sock)
