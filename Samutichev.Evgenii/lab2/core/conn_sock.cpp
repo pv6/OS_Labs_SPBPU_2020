@@ -15,7 +15,7 @@ namespace {
         int read() const override;
         void write(int msg) const override;
 
-        ~ConnectionImpl();
+        ~ConnectionImpl() override;
     private:
         int _descr1, _descr2;
         std::string _id;

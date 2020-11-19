@@ -15,6 +15,8 @@ private:
     Host(const Host& other) = delete;
     Host& operator=(const Host& other) = delete;
 
+    void printInfo();
+
     Connection* _conn;
     size_t _currentTurn;
     Wolfer _wolfer;

@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <time.h>
 #include <signal.h>
+#include <limits>
 
 const mode_t permissions = 0666;
 const time_t timeout = 5;
@@ -21,12 +22,19 @@ Host::~Host() {
 }
 
 void Host::run(Semaphore& hostSem, Semaphore& clientSem) {
+    printInfo();
     while(true) {
         printf("Turn %lu\n", _currentTurn);
         printf("Enter wolf number: ");
         int number;
         int status;
         std::cin >> number;
+        if (!std::cin.good()) {
+            printf("Incorrect input, try again\n\n");
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            continue;
+        }
         if (number < 0) {
             printf("The game was closed\n");
             break;
@@ -59,4 +67,9 @@ void Host::run(Semaphore& hostSem, Semaphore& clientSem) {
         _currentTurn++;
         clientSem.post();
     }
+}
+
+void Host::printInfo() {
+    printf("Hello, welcome to the \"Wolfer vs Goatling\" game \n");
+    printf("Each turn you need to choose wolf number from 1 to %d. If wolf number is negative - the game will be closed \n\n", Game::wolferNumMax);
 }
