@@ -21,7 +21,7 @@ int main(int argc, char const* argv[]) {
     catch (CustomException const& exception) {
         std::cout << 
             exception.what() << '\n' << 
-            (strlen(exception.errn()) ? exception.errn() : "") <<
+            (strlen(exception.errn()) ? exception.errn() : "") << '\n' <<
             exception.file() << '\n' << 
             exception.line() << '\n';
         syslog(LOG_CRIT, "%s", exception.what());

@@ -10,9 +10,9 @@
 #include <ctime>    // time, timespec, clock_gettime, time_t, CLOCK_REALTIME
 #include <cstdlib>  // rand, srand
 
-std::string const Player::semaphore_name_1  = "/lab2_1";
-std::string const Player::semaphore_name_2  = "/lab2_2";
-std::string const Player::working_dir       = "/var/run/lab2/";
+std::string const Player::semaphore_name_1  = "/via8_lab2_1";
+std::string const Player::semaphore_name_2  = "/via8_lab2_2";
+std::string const Player::working_dir       = "/var/run/via8_lab2/";
 std::string const Player::pid_path_host     = Player::working_dir + "host.pid";
 std::string const Player::pid_path_client   = Player::working_dir + "client.pid";
 
