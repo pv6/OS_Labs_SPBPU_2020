@@ -8,7 +8,7 @@
 #include <unistd.h>   // ftruncate
 #include <cstring>    // memcpy
 
-std::string const ConnShm::name = "/lab2_shm";
+std::string const ConnShm::name = "/via8_lab2_shm";
 
 Conn* Conn::createConn(std::string const& working_dir, size_t max_buff_size) {
     return new ConnShm(working_dir, max_buff_size);
