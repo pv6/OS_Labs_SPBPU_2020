@@ -59,10 +59,6 @@ void Client::start() {
     while (work) {
         syslog(LOG_INFO, "wait host data");
         sem_wait(semaphore_client);
-        if(!work){
-            sem_post(semaphore_host);
-            return;
-        }
         syslog(LOG_INFO, "do work");
         connection.readConnection(&dto);
         int weather = getWeather(dto);

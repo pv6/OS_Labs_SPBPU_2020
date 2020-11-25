@@ -78,17 +78,9 @@ void Host::start() {
                 connectionInfo = ConnectionInfo(0);
                 continue;
             }
-            if (!work) {
-                sem_post(semaphore_client);
-                return;
-            }
             syslog(LOG_INFO, "do work");
             connection.readConnection(&dto);
             weatherForDate(dto);
-        }
-        if (!work){
-            sem_post(semaphore_client);
-            return;
         }
     }
 }
