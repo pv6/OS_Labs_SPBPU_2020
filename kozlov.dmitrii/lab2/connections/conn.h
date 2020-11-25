@@ -10,13 +10,14 @@ public:
     bool Read(void* buf, size_t count) noexcept;
     bool Write(void* buf, size_t count) noexcept;
 
+    enum class MSG_TYPE
+    {
+        TO_WOLF = 0,
+        TO_GOAT
+    };
+
     struct Msg {
-        enum class TYPE
-        {
-            TO_WOLF = 0,
-            TO_GOAT
-        };
-        TYPE type;
+        MSG_TYPE type;
         int data;
     };
 

@@ -7,8 +7,8 @@
 
 #include "wolf.h"
 
-Wolf::Wolf(int host_pid_)
-    : _conn(host_pid_, true) {
+Wolf::Wolf(int hostPid)
+    : _conn(hostPid, true) {
 
     openlog("GameHost", LOG_PID, LOG_DAEMON);
 
@@ -17,7 +17,7 @@ Wolf::Wolf(int host_pid_)
 
     _isClientConnected = false;
     _clientPid = 0;
-    _hostPid = host_pid_;
+    _hostPid = hostPid;
 
     _pSemHost = sem_open(_semHostName.c_str(), O_CREAT, 0666, 0);
     if (_pSemHost == SEM_FAILED) {
@@ -60,7 +60,7 @@ Wolf& Wolf::GetInstance(int host_pid) {
 }
 
 
-void Wolf::PrepareGame() {
+void Wolf::PrepareGame() noexcept{
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_flags = SA_SIGINFO;
@@ -73,7 +73,7 @@ void Wolf::PrepareGame() {
 }
 
 
-void Wolf::StartGame() {
+void Wolf::StartGame() noexcept{
     syslog(LOG_INFO, "Wolf's started hunting...");
     std::cout << "Wolf's started hunting..." << std::endl;
 
@@ -118,7 +118,7 @@ void Wolf::StartGame() {
             break;
         }
 
-        msg.type = Conn::Msg::TYPE::TO_GOAT;
+        msg.type = Conn::MSG_TYPE::TO_GOAT;
         msg.data = static_cast<long>(_goatState);
         if (!_conn.Write(&msg, sizeof(msg))) {
             return;
@@ -131,7 +131,7 @@ void Wolf::StartGame() {
 }
 
 
-int Wolf::GetValue() {
+int Wolf::GetValue() noexcept{
     int res;
     std::cout << "Enter the number in range from " << GAME_CONSTANTS::MIN_WOLF_VAL << " to " << GAME_CONSTANTS::MAX_WOLF_VAL << std::endl;
 
@@ -146,7 +146,7 @@ int Wolf::GetValue() {
 }
 
 
-bool Wolf::SemWait(sem_t* sem) {
+bool Wolf::SemWait(sem_t* sem) noexcept{
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     ts.tv_sec += GAME_CONSTANTS::TIMEOUT;
@@ -159,7 +159,7 @@ bool Wolf::SemWait(sem_t* sem) {
 }
 
 
-bool Wolf::SemSignal(sem_t* sem) {
+bool Wolf::SemSignal(sem_t* sem) noexcept{
     if (sem_post(sem) == -1) {
         perror("sem_post()");
         return false;
@@ -167,7 +167,7 @@ bool Wolf::SemSignal(sem_t* sem) {
     return true;
 }
 
-void Wolf::HandleSignal(int sig, siginfo_t* info, void* /*ptr*/) {
+void Wolf::HandleSignal(int sig, siginfo_t* info, void* /*ptr*/) noexcept{
     static Wolf& wolf = GetInstance(0);
     switch (sig) {
     case SIGUSR1:

@@ -9,27 +9,27 @@ class Goat {
 public:
     ~Goat();
 
-    static Goat& GetInstance(int hostPid = 0);
+    static Goat& GetInstance(int hostPid = 0) noexcept(false);
 
-    void PrepareGame();
-    void StartGame();
+    void PrepareGame() noexcept;
+    void StartGame() noexcept;
 
 private:
-    Goat(int hostPid);
+    Goat(int hostPid) noexcept(false);
 
     Goat(Goat& w) = delete;
     Goat& operator=(const Goat& w) = delete;
 
-    int GenerateValue();
-    bool GenAndWriteValue();
+    int GenerateValue() noexcept;
+    bool GenAndWriteValue() noexcept;
 
-    int IsAlive(){ return _goatState == GOAT_STATE::ALIVE; }
+    int IsAlive() noexcept { return _goatState == GOAT_STATE::ALIVE; }
 
-    bool SemWait(sem_t* sem);
-    bool SemSignal(sem_t* sem);
-    void ConnectToSem(sem_t** sem, std::string semName);
+    bool SemWait(sem_t* sem) noexcept;
+    bool SemSignal(sem_t* sem) noexcept;
+    void ConnectToSem(sem_t** sem, std::string semName) noexcept;
 
-    static void OnSignalRecieve(int sig);
+    static void OnSignalRecieve(int sig) noexcept;
 
     Conn _conn;
     sem_t* _semHost;

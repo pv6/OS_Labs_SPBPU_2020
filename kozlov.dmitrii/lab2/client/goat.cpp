@@ -55,11 +55,11 @@ Goat& Goat::GetInstance(int hostPid) {
     return goat;
 }
 
-void Goat::PrepareGame() {
+void Goat::PrepareGame() noexcept{
     kill(_hostPid, SIGUSR1);
 }
 
-void Goat::StartGame() {
+void Goat::StartGame() noexcept{
     std::cout << "Goat's started hiding..." << std::endl;
 
     std::cout << "___________GAME_STEP___________" << std::endl;
@@ -97,7 +97,7 @@ void Goat::StartGame() {
     }
 }
 
-int Goat::GenerateValue() {
+int Goat::GenerateValue() noexcept{
     std::random_device rd;
     std::mt19937 gen(rd());
     if (IsAlive()) {
@@ -109,12 +109,12 @@ int Goat::GenerateValue() {
     }
 }
 
-bool Goat::GenAndWriteValue() {
+bool Goat::GenAndWriteValue() noexcept{
     Conn::Msg msg;
     int cur_val = GenerateValue();
     std::cout << "Goat: My number is " << cur_val << std::endl;
 
-    msg.type = Conn::Msg::TYPE::TO_WOLF;
+    msg.type = Conn::MSG_TYPE::TO_WOLF;
     msg.data = cur_val;
 
     if (!_conn.Write(&msg, sizeof(msg))) {
@@ -123,7 +123,7 @@ bool Goat::GenAndWriteValue() {
     return true;
 }
 
-bool Goat::SemWait(sem_t* sem) {
+bool Goat::SemWait(sem_t* sem) noexcept{
     if (sem_wait(sem) == -1) {
         perror("sem_timewait() ");
         return false;
@@ -131,7 +131,7 @@ bool Goat::SemWait(sem_t* sem) {
     return true;
 }
 
-bool Goat::SemSignal(sem_t* sem) {
+bool Goat::SemSignal(sem_t* sem) noexcept{
     if (sem_post(sem) == -1) {
         perror("sem_post() ");
         return false;
@@ -139,7 +139,7 @@ bool Goat::SemSignal(sem_t* sem) {
     return true;
 }
 
-void Goat::ConnectToSem(sem_t** sem, std::string sem_name) {
+void Goat::ConnectToSem(sem_t** sem, std::string sem_name) noexcept{
     for (int i = 0; i < GAME_CONSTANTS::SEM_RECONNECT_TIMEOUT; i++) {
         *sem = sem_open(sem_name.c_str(), 0);
         if (*sem != SEM_FAILED) {
@@ -149,7 +149,7 @@ void Goat::ConnectToSem(sem_t** sem, std::string sem_name) {
     }
 }
 
-void Goat::OnSignalRecieve(int sig) {
+void Goat::OnSignalRecieve(int sig) noexcept{
 
     Goat &goat = GetInstance();
 

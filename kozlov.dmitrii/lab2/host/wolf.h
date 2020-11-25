@@ -11,24 +11,22 @@ class Wolf {
 public:
     ~Wolf();
 
-    static Wolf& GetInstance(int host_pid);
+    static Wolf& GetInstance(int host_pid) noexcept(false);
 
-    void StartGame();
-    void PrepareGame();
+    void StartGame() noexcept;
+    void PrepareGame() noexcept;
 
 private:
-    Wolf(int host_pid);
+    Wolf(int host_pid) noexcept(false);
 
     Wolf(Wolf& w) = delete;
     Wolf& operator=(const Wolf& w) = delete;
 
-    void Terminate();
+    int GetValue() noexcept;
+    bool SemWait(sem_t* sem) noexcept;
+    bool SemSignal(sem_t* sem) noexcept;
 
-    int GetValue();
-    bool SemWait(sem_t* sem);
-    bool SemSignal(sem_t* sem);
-
-    static void HandleSignal(int sig, siginfo_t* info, void* ptr);
+    static void HandleSignal(int sig, siginfo_t* info, void* ptr) noexcept;
 private:
     Conn _conn;
     sem_t* _pSemHost;
