@@ -2,7 +2,7 @@
 #include <ConnectionConst.h>
 #include <iostream>
 #include <cstring>
-#include <zconf.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <cerrno>
 #include <syslog.h>

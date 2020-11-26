@@ -2,7 +2,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdexcept>
-#include <zconf.h>
+#include <unistd.h>
 #include <IConnection.h>
 
 void IConnection::openConnection(size_t id, bool create) {
