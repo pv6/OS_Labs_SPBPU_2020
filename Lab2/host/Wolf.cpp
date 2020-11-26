@@ -1,10 +1,7 @@
-#include <iostream>
-#include <cstdlib>
-
 #include "Wolf.h"
 
 Wolf::Wolf(int id)
-    : conn(id, true), cntSteps(1), cntDeadMove(0), isAlive(1)
+    : conn(id, false), cntSteps(1), cntDeadMove(0), isAlive(1)
 {
     srand(time(nullptr));
 }
@@ -73,9 +70,9 @@ bool Wolf::catchGoat()
             printf("Diff = |%d - %d| = %d > %d => Dead\n", wolfNum, goatNum, diff, DEAD_SCORE_DIFF);
             cntDeadMove++;
 
-            if (cntDeadMove == 2)
+            if (cntDeadMove == WIN_STEPS)
             {
-                printf("2 dead goat's moves in a row => Game over\n");
+                printf("%i dead goat's moves in a row => Game over\n", WIN_STEPS);
 
                 return true;
             }

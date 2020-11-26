@@ -23,6 +23,8 @@ int main()
         SemaphoreWrapper sem_host(SEM_HOST_NAME);
         SemaphoreWrapper sem_server(SEM_SERVER_NAME);
 
+        Conn conn(ID, true);
+
         pid_t pid = fork();
 
         if (pid == -1)
@@ -37,7 +39,7 @@ int main()
             kill(pid, SIGTERM);
             syslog(LOG_INFO, "Client completed.");
         } else {
-            sleep(1);
+            //sleep(1);
 
             Goat &goat = Goat::getInstance(ID);
             goat.run(sem_host, sem_server);
