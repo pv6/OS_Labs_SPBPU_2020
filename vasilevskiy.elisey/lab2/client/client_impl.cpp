@@ -45,8 +45,8 @@ void Client::terminate() {
 }
 
 void Client::start() {
+    timespec ts{};
     DTO dto;
-    struct timespec ts{};
     clock_gettime(CLOCK_REALTIME, &ts);
     ts.tv_sec += ConnectionConst::TIMEOUT;
     syslog(LOG_INFO, "wait host connect");
@@ -58,7 +58,13 @@ void Client::start() {
     work = true;
     while (work) {
         syslog(LOG_INFO, "wait host data");
-        sem_wait(semaphore_client);
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += ConnectionConst::TIMEOUT_CLIENT;
+        if (sem_timedwait(semaphore_client, &ts) == -1){
+            syslog(LOG_INFO, "host timeout");
+            work = false;
+            return;
+        }
         syslog(LOG_INFO, "do work");
         connection.readConnection(&dto);
         int weather = getWeather(dto);
@@ -85,14 +91,14 @@ int Client::getWeather(const DTO &dto) {
 
 void Client::handleSignal(int signum) {
     Client &client = getInstance(0);
-
-    switch (signum) {
-        case SIGTERM:
-        case SIGINT:
-            syslog(LOG_INFO, "stop work");
-            client.work = false;
-            break;
-        default:
-            break;
+    switch (signum)
+    {
+    case SIGTERM:
+    case SIGINT:
+        syslog(LOG_INFO, "stop work");
+        client.work = false;
+        break;
+    default:
+        break;
     }
 }

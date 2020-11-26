@@ -38,7 +38,7 @@ void Host::openConnection() {
 }
 
 void Host::start() {
-    struct timespec ts{};
+    timespec ts{};
     DTO dto;
     syslog(LOG_INFO, "wait client connect");
     pause();
@@ -86,21 +86,27 @@ void Host::start() {
 }
 
 DTO Host::getDate() {
-    int result = -1;
+    bool result = false;
     unsigned int day;
     unsigned int month;
     unsigned int year;
-    while (result < 0 && work) {
-        struct tm date{};
+    while (!result && work) {
+        tm date{};
         day = getDataFromUser(31, Host::day);
         month = getDataFromUser(12, Host::month);
         year = getDataFromUser(9999, Host::year);
         date.tm_year = year - 1900;
         date.tm_mon = month - 1;
         date.tm_mday = day;
-        result = mktime(&date);
-        if (result < 0 && work) {
+        date.tm_isdst = -1;
+        tm tCheck = date;
+        mktime(&tCheck);
+        if ((date.tm_year != tCheck.tm_year || date.tm_mon != tCheck.tm_mon || date.tm_mday != tCheck.tm_mday) && work)
+        {
+            result = false;
             std::cout << "please enter correct date" << std::endl;
+        }else{
+            result = true;
         }
     }
     return DTO(day, month, year);
@@ -143,7 +149,7 @@ void Host::hanleSignal(int signum, siginfo_t *info, void *ptr) {
         default: {
             syslog(LOG_INFO, "stop work");
             if (instance.connectionInfo.isAttached()) {
-                kill(instance.connectionInfo.isAttached(), signum);
+                kill(instance.connectionInfo.getPid(), signum);
                 instance.connectionInfo = ConnectionInfo(0);
             }
             instance.work = false;
