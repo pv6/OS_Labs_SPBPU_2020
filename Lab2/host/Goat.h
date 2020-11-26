@@ -1,6 +1,9 @@
 #ifndef GOAT_H
 #define GOAT_H
 
+#include <cstdlib>
+#include <ctime>
+
 #include "../interface/conn.h"
 #include "../utils/SemaphoreWrapper.h"
 

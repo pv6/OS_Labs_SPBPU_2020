@@ -1,12 +1,9 @@
-#include <cstdlib>
-#include <ctime>
-
 #include "Goat.h"
 
 Goat::Goat(int id)
     : conn(id, false), isAlive(1)
 {
-    srand(time(nullptr));
+    srand(time(nullptr) + 1);
 }
 
 Goat& Goat::getInstance(int id)
@@ -18,10 +15,10 @@ Goat& Goat::getInstance(int id)
 void Goat::run(SemaphoreWrapper &sem_host, SemaphoreWrapper &sem_server)
 {
     while (true) {
-        sem_server.wait();
+        sem_server.timedWait();
         step();
         sem_host.post();
-        sem_server.wait();
+        sem_server.timedWait();
         acquireStatus();
     }
 }
