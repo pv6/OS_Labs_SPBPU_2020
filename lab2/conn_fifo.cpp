@@ -12,13 +12,11 @@
 
 void ConnFifo::openConn() {
     int flg = 0777;
-    if (isCreator && mkfifo(name_path.c_str(), flg) == -1) {
+    if (isCreator && mkfifo(name_path.c_str(), flg) == -1)
         throw std::runtime_error("fifo failed, error " + std::string(strerror(errno)));
-    }
     this->id = open(name_path.c_str(), O_RDWR);
-    if (this->id == -1) {
+    if (this->id == -1)
             throw std::runtime_error("fifo failed, error " + std::string(strerror(errno)));
-    }
 }
 
 void ConnFifo::readConn(char *buf, size_t count) {
@@ -33,7 +31,7 @@ void ConnFifo::readConn(char *buf, size_t count) {
 
 void ConnFifo::writeConn(char *buf, size_t count) {
     if (buf == nullptr)
-	    throw std::runtime_error("nullptr buf passed into fifo reading");
+	    throw std::runtime_error("nullptr buf passed into fifo writing");
     if (count != msgSize)
 	    throw std::runtime_error("wrong msg size, it's should be 10: dd.mm.yyyy");
     if (write(id, buf, size) == -1) {
@@ -42,7 +40,6 @@ void ConnFifo::writeConn(char *buf, size_t count) {
 }
 
 void ConnFifo::closeConn() {
-if (close(id) < 0 || (isCreator && remove(name_path.c_str()) < 0)) {
+    if (close(id) < 0 || (isCreator && remove(name_path.c_str()) < 0))
         throw std::runtime_error("error in closing " + std::string(strerror(errno)));
-    }
 }
