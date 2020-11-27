@@ -32,9 +32,11 @@ protected:
     static std::string const semaphore_name_2;
     static std::string const working_dir;
     struct {
-        int const max_diff = 70;
-        int const revive_diff = 20;
-        int const max_dead_turns = 2;
+        int const MAX_DIFF = 70;
+        int const REVIVE_DIFF = 20;
+        int const MAX_DEAD_TURNS = 2;
+        int const CLIENT_FLAG_DEAD = 0;
+        int const CLIENT_FLAG_ALIVE = 1;
     } game_rules;
 
     // connection

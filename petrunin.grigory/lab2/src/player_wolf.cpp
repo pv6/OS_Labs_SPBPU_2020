@@ -9,6 +9,7 @@
 #include <iostream>    // cout
 #include <string>      // to_string
 #include <unistd.h>    // usleep
+#include <iomanip>     // setw
 
 PlayerWolf* PlayerWolf::instance = nullptr;
 
@@ -84,21 +85,77 @@ void PlayerWolf::play() {
         }
         std::cout << "client arrived\n";
         syslog(LOG_INFO, "game starts");
+
+        int status = game_rules.CLIENT_FLAG_ALIVE;
+        int dead_turns = 0;
+        int rolled_client;
         while (!m_stop) {
-            if (!timed_wait(m_sem1)) { break; }
+            if (!timed_wait(m_sem2)) { break; }
+            int rolled = roll(m_player_stats.ROLL_MIN, m_player_stats.ROLL_MAX);
+            m_connection->read((void*)&rolled_client, sizeof(int));
+            std::cout 
+                << "rolled " << std::setw(3) << rolled
+                << "  vs " << std::setw(3) << rolled_client << " client ... ";
+            if (status == game_rules.CLIENT_FLAG_DEAD) {
+                if (abs(rolled_client - rolled) <= game_rules.REVIVE_DIFF) {
+                    status = game_rules.CLIENT_FLAG_ALIVE;
+                    dead_turns = 0;
+                    std::cout << "revived\n";
+                }
+                else {
+                    dead_turns++;
+                    std::cout << "dead for " << dead_turns << " turn(s)\n";
+                    if (dead_turns == game_rules.MAX_DEAD_TURNS) {
+                        // TODO: send signal
+                        break;
+                    }
+                }
+            }
+            else {
+                if (abs(rolled_client - rolled) > game_rules.MAX_DIFF) {
+                    status = game_rules.CLIENT_FLAG_DEAD;
+                    std::cout << "died\n"; 
+                }
+                else {
+                    std::cout << "alive\n";
+                }
+            }
 
-            int rolled = roll(m_player_stats.roll_min, m_player_stats.roll_max);
-            std::cout << "rolled " << rolled << '\n';
-            m_connection->write((void*)&rolled, m_connection->m_max_buff_size);
-
-            post(m_sem2);
+            m_connection->write((void*)&status, sizeof(int));
+            post(m_sem1);
 
             // uncomment if you want to track turns in real-time
             // usleep(250000);
         }
+        
         syslog(LOG_INFO, "game ends");
-        std::cout << "client gone\n";
+        std::cout << "client kicked out\n";
         m_connection->clear();
         m_wait_client = true;
     }
 }
+
+/* better implementation below */
+// void PlayerWolf::play() {
+//     while (!m_stop) {
+//         while(!m_stop && m_wait_client);
+//         if (m_stop) {
+//             break;
+//         }
+//         std::cout << "client arrived\n";
+//         syslog(LOG_INFO, "game starts");
+//         while (!m_stop) {
+//             if (!timed_wait(m_sem1)) { break; }
+//             int rolled = roll(m_player_stats.ROLL_MIN, m_player_stats.ROLL_MAX);
+//             std::cout << "rolled " << rolled << '\n';
+//             m_connection->write((void*)&rolled, m_connection->m_max_buff_size);
+//             post(m_sem2);
+//             // uncomment if you want to track turns in real-time
+//             // usleep(250000);
+//         }
+//         syslog(LOG_INFO, "game ends");
+//         std::cout << "client gone\n";
+//         m_connection->clear();
+//         m_wait_client = true;
+//     }
+// }

@@ -78,41 +78,63 @@ void PlayerGoat::play() {
     }
 
     // start playing
-    bool dead = false;
-    int dead_turns = 0;
-    int rolled_host;
-    do {
-        post(m_sem1);
-        if (!timed_wait(m_sem2)) { break; }
+    int status = game_rules.CLIENT_FLAG_ALIVE;
+    while (!m_stop) {
+        int rolled = (status == game_rules.CLIENT_FLAG_DEAD) ? 
+            roll(m_player_stats.ROLL_DEAD_MIN, m_player_stats.ROLL_DEAD_MAX) :
+            roll(m_player_stats.ROLL_MIN, m_player_stats.ROLL_MAX);
+        std::cout << "rolled " << rolled << '\n';
+        m_connection->write((void*)&rolled, sizeof(int));
 
-        int rolled = dead ? 
-            roll(m_player_stats.roll_dead_min, m_player_stats.roll_dead_max) :
-            roll(m_player_stats.roll_min, m_player_stats.roll_max);
-        m_connection->read((void*)&rolled_host, m_connection->m_max_buff_size);
-        std::cout 
-            << "rolled " << std::setw(3) << rolled
-            << "  vs " << std::setw(3) << rolled_host << " host ... ";
-
-        if (dead) {
-            if (abs(rolled_host - rolled) <= game_rules.revive_diff) {
-                dead = false;
-                dead_turns = 0;
-                std::cout << "revived\n";
-            }
-            else {
-                dead_turns++;
-                std::cout << "dead for " << dead_turns << " turn(s)\n";
-                if (dead_turns == game_rules.max_dead_turns) break;
-            }
-        }
-        else {
-            if (abs(rolled_host - rolled) > game_rules.max_diff) {
-                dead = true;
-                std::cout << "died\n"; 
-            }
-            else {
-                std::cout << "alive\n";
-            }
-        }
-    } while (!m_stop);
+        post(m_sem2);
+        if (!timed_wait(m_sem1)) { break; }
+        m_connection->read((void*)&status, sizeof(int));
+    }
 }
+
+/* better implementation below */
+// void PlayerGoat::play() {
+//     // make sure semaphores are at value 0
+//     timed_wait(m_sem1, (time_t)0);
+//     timed_wait(m_sem2, (time_t)0);
+//     // notify host that client has arrived
+//     if (kill(m_host_pid, SIGUSR1) != 0) {
+//         throw CustomException("kill() error", __FILE__, __LINE__, (int)errno);
+//     }
+//     // start playing
+//     bool dead = false;
+//     int dead_turns = 0;
+//     int rolled_host;
+//     do {
+//         post(m_sem1);
+//         if (!timed_wait(m_sem2)) { break; }
+//         int rolled = dead ? 
+//             roll(m_player_stats.ROLL_DEAD_MIN, m_player_stats.ROLL_DEAD_MAX) :
+//             roll(m_player_stats.ROLL_MIN, m_player_stats.ROLL_MAX);
+//         m_connection->read((void*)&rolled_host, m_connection->m_max_buff_size);
+//         std::cout 
+//             << "rolled " << std::setw(3) << rolled
+//             << "  vs " << std::setw(3) << rolled_host << " host ... ";
+//         if (dead) {
+//             if (abs(rolled_host - rolled) <= game_rules.REVIVE_DIFF) {
+//                 dead = false;
+//                 dead_turns = 0;
+//                 std::cout << "revived\n";
+//             }
+//             else {
+//                 dead_turns++;
+//                 std::cout << "dead for " << dead_turns << " turn(s)\n";
+//                 if (dead_turns == game_rules.MAX_DEAD_TURNS) break;
+//             }
+//         }
+//         else {
+//             if (abs(rolled_host - rolled) > game_rules.MAX_DIFF) {
+//                 dead = true;
+//                 std::cout << "died\n"; 
+//             }
+//             else {
+//                 std::cout << "alive\n";
+//             }
+//         }
+//     } while (!m_stop);
+// }

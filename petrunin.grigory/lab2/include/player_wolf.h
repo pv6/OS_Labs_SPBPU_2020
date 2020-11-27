@@ -13,8 +13,8 @@ private:
 
     bool m_wait_client = true;
     struct {
-        int const roll_min = 1;
-        int const roll_max = 100;
+        int const ROLL_MIN = 1;
+        int const ROLL_MAX = 100;
     } m_player_stats;
 
     PlayerWolf();

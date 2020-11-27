@@ -13,10 +13,10 @@ private:
 
     int m_host_pid = 0;
     struct {
-        int const roll_min = 1;
-        int const roll_max = 100;
-        int const roll_dead_min = 1;
-        int const roll_dead_max = 50;
+        int const ROLL_MIN = 1;
+        int const ROLL_MAX = 100;
+        int const ROLL_DEAD_MIN = 1;
+        int const ROLL_DEAD_MAX = 50;
     } m_player_stats;
 
     PlayerGoat();

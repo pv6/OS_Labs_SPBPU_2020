@@ -58,12 +58,22 @@ void ConnFifo::clear() {
     if (::close(m_fd) != 0) {
         throw CustomException("close() error", __FILE__, __LINE__, (int)errno);
     }
-    char buff[32];
-    while (::read(m_fd, buff, 32) == 32);
+    if (::unlink(m_path.c_str()) != 0) {
+        throw CustomException("unlink() error", __FILE__, __LINE__, (int)errno);
+    }
+    if (mkfifo(m_path.c_str(), 0600) != 0 && errno != EEXIST) {
+        throw CustomException("mkfifo() error", __FILE__, __LINE__, (int)errno);
+    }
     m_fd = ::open(m_path.c_str(), O_RDWR);
     if (m_fd == -1) {
         throw CustomException("open() error", __FILE__, __LINE__, (int)errno);
     }
+    // char buff[32];
+    // while (::read(m_fd, buff, 32) == 32);
+    // m_fd = ::open(m_path.c_str(), O_RDWR);
+    // if (m_fd == -1) {
+    //     throw CustomException("open() error", __FILE__, __LINE__, (int)errno);
+    // }
     syslog(LOG_DEBUG, "clearing fifo complete");
 }
 
