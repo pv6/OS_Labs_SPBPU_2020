@@ -1,6 +1,16 @@
 #ifndef CONN_H_INCLUDED
 #define CONN_H_INCLUDED
 
+#include <errno.h>
+#include <iostream>
+#include <stdio.h>
+#include <syslog.h>
+#include <stdexcept>
+#include <string>
+#include <ñstring>
+#include <cstddef>
+
+
 class Conn{
 public:
     static Conn* createConn(bool isCreator);

@@ -2,9 +2,10 @@
 #define CONN_FIFO_H_INCLUDED
 
 #include "conn.h"
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <string>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 class ConnFifo:Conn{
 public:

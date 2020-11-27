@@ -2,8 +2,6 @@
 #define CONN_SEG_H_INCLUDED
 
 #include "conn.h"
-#include <stdexcept>
-#include <cstring>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
@@ -19,7 +17,6 @@ private:
     size_t msgSize = 11; //msg string is: dd.mm.yyyy'/0'
     bool isCreator;
     int id;
-    const std::string name_path = "/tmp/fifo.txt";
 };
 
 #endif // CONN_SEG_H_INCLUDED

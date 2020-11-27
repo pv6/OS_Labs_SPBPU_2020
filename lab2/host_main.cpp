@@ -1,8 +1,4 @@
 #include "host_cls.h"
-#include <syslog.h>
-#include <iostream>
-#include <stdexcept>
-#include <unistd.h>
 
 int main(int argc, char* argv[]){
     openlog("HOST-LAB2", LOG_PID | LOG_NDELAY, LOG_USER);

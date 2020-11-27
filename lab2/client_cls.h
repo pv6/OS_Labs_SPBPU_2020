@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <random>
+#include <stdexcept>
 #include <map>
 #include "conn.h"
 #include "DTStor.h"

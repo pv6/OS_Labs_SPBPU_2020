@@ -2,6 +2,10 @@
 #define CONN_SHM_H_INCLUDED
 
 #include "conn.h"
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 class ConnShm:Conn{
 public:

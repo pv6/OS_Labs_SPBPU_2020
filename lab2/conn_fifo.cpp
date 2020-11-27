@@ -1,14 +1,5 @@
 #include "conn_fifo.h"
 
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <iostream>
-#include <stdio.h>
-#include <unistd.h>
-#include <syslog.h>
-#include <cstring>
 
 void ConnFifo::openConn() {
     int flg = 0777;

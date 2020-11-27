@@ -1,6 +1,4 @@
-#include <syslog.h>
-#include "client.h"
-#include <stdexcept>
+#include "client_cls.h"
 
 int main(int argc, char* argv[]) {
     openlog("CLIENT-LAB2", LOG_PID | LOG_NDELAY, LOG_USER);
