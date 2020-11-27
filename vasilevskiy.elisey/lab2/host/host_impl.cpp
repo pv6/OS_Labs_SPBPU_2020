@@ -48,20 +48,22 @@ void Host::start() {
     while (work) {
         if (!connectionInfo.isAttached()) {
             syslog(LOG_INFO, "wait client connect");
-            sem_wait(semaphore_client);
             while (!connectionInfo.isAttached()) {
                 pause();
             }
             if (!work) {
+                kill(connectionInfo.getPid(), SIGTERM);
+                connectionInfo = ConnectionInfo(0);
                 return;
             }
             syslog(LOG_INFO, "client attached");
             sem_post(semaphore_client);
         } else {
             dto = getDate();
-            if (connectionInfo.isAttached())
-            {
+            if (connectionInfo.isAttached()){
                 connection.writeConnection(&dto);
+            }else {
+                continue;
             }
             syslog(LOG_INFO, "call client");
             sem_post(semaphore_client);

@@ -54,7 +54,6 @@ void Client::start() {
         throw std::runtime_error("timeout  " + std::string(strerror(errno)));
     }
     syslog(LOG_INFO, "host connected");
-    sem_post(semaphore_host);
     work = true;
     while (work) {
         syslog(LOG_INFO, "wait host data");
@@ -62,6 +61,7 @@ void Client::start() {
         ts.tv_sec += ConnectionConst::TIMEOUT_CLIENT;
         if (sem_timedwait(semaphore_client, &ts) == -1){
             syslog(LOG_INFO, "host timeout");
+            sem_post(semaphore_host);
             work = false;
             return;
         }
