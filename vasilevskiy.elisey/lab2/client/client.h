@@ -27,7 +27,6 @@ private:
     sem_t *semaphore_host;
     sem_t *semaphore_client;
     int host_pid;
-    std::map<long, int> oldWeather;
     bool work = true;
 
     explicit Client(int host_pid);

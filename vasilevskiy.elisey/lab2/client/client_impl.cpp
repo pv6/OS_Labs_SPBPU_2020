@@ -57,14 +57,7 @@ void Client::start() {
     work = true;
     while (work) {
         syslog(LOG_INFO, "wait host data");
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += ConnectionConst::TIMEOUT_CLIENT;
-        if (sem_timedwait(semaphore_client, &ts) == -1){
-            syslog(LOG_INFO, "host timeout");
-            sem_post(semaphore_host);
-            work = false;
-            return;
-        }
+        sem_wait(semaphore_client);
         syslog(LOG_INFO, "do work");
         connection.readConnection(&dto);
         int weather = getWeather(dto);
@@ -78,15 +71,9 @@ void Client::start() {
 
 int Client::getWeather(const DTO &dto) {
     long date = dto.getYear() * 10000 + dto.getMonth() * 100 + dto.getDay();
-    auto it = oldWeather.find(date);
-    if (it != oldWeather.end()) {
-        return it->second;
-    }
     std::minstd_rand generator(date);
     std::uniform_int_distribution<int> distribution(ConnectionConst::MIN_TEMPERATURE, ConnectionConst::MAX_TEMPERATURE);
-    int weather = distribution(generator);
-    oldWeather.insert(std::pair<long, int>(date, weather));
-    return weather;
+    return distribution(generator);
 }
 
 void Client::handleSignal(int signum) {
