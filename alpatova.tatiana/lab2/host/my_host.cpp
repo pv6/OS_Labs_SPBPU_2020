@@ -91,24 +91,9 @@ void my_host::run() {
             sleep(1);
         else
         {
-            if (is_client_attached && !get_msg(msg))
+            if (!get_msg(msg))
                 continue;
-            if (!is_client_attached)
-                continue;
-            #ifndef host_sock
             conn.send_connect(&msg, MESSAGE_SIZE);
-            #else
-            if (!conn.send(&msg, MESSAGE_SIZE) && errno == EPIPE)
-            {
-                if (!conn.open(getpid(), true)){
-                    terminate();
-                    }
-                    exit(EXIT_FAILURE);
-                }
-
-                conn.send(&msg, MESSAGE_SIZE);
-            }
-            #endif
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_sec += TIMEOUT;
             sem_post(client_sem);

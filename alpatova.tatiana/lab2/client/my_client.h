@@ -20,6 +20,8 @@ public:
     static my_client & get_instance(int host_pid);
     bool open_connection();
     void run();
+    my_client(const my_client &) = delete;
+    my_client& operator=(const my_client &) = delete;
 
 private:
     my_client(int host_pid);

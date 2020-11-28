@@ -14,7 +14,7 @@ my_client::my_client(int host_pid_)
 }
 
 my_client & my_client::get_instance(int host_pid) {
-    static my_client client = my_client(host_pid);
+    static my_client client(host_pid);
     return client;
 }
 
@@ -68,7 +68,7 @@ void my_client::signal_handler(int sig_pid, siginfo_t *info, void *context) {
 }
 
 void my_client::terminate(int sig_pid) {
-    kill(host_pid, SIGUSR2);
+    kill(host_pid, SIGUSR1);
     syslog(LOG_NOTICE, "client: terminate");
     if (host_sem != SEM_FAILED)
     {

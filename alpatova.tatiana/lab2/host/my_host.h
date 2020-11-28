@@ -21,8 +21,10 @@ public:
     static my_host & get_instance();
     bool open_connection();
     void run();
-
+    my_host(const my_host &) = delete;
+    my_host& operator=(const my_host &) = delete;
 private:
+
     my_host();
     bool get_msg(message &msg);
     void terminate();
