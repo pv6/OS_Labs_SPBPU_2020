@@ -1,7 +1,7 @@
 #pragma once
 
 class Connection {
-    int fd = -1;
+    int fd = -1; // may be a port, pipe file id or mq id
 public:
     Connection(); // creates new connection
     Connection(int fd); // opens connection with file descriptor
