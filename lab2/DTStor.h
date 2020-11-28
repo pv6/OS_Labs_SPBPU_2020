@@ -9,21 +9,17 @@
 #include <cstdlib>
 #include <ctime>
 
+
 class DTStor{
 public:
-    unsigned int getDay(){return this->day;}
-    unsigned int getMonth(){return this->month;}
-    unsigned int getYear(){return this->year;}
-    int getTemp();
-    static DTStor* getDTStor(const std::string &str_date);
-    DTStor(unsigned int day = 0, unsigned int month = 0, unsigned int year = 0) :
-            day{day}, month{month}, year{year} {};
+    static int getTemp();
+    static void parseToDTStor(const std::string &str_date);
 private:
-    static bool validate(unsigned int v_day, unsigned int v_month, unsigned int v_year);
-    static std::map<long, int> temp_map;
-    unsigned int day;
-    unsigned int month;
-    unsigned int year;
+    static bool validate();
+    static unsigned int day;
+    static unsigned int month;
+    static unsigned int year;
+    DTStor();
 };
 
 #endif // DTSTOR_H_INCLUDED

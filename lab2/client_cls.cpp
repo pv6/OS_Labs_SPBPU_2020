@@ -73,10 +73,11 @@ void Client::startClient(){
         }
         syslog(LOG_NOTICE, "buf to string");
         std::string dateString(buf);
+        std::cout << "Client received in string: " << dateString << "\n";
         syslog(LOG_NOTICE, "get dtstor");
-        DTStor* DTSInst = DTStor::getDTStor(dateString);
+        DTStor::parseToDTStor(dateString);
         syslog(LOG_NOTICE, "get temp");
-        int weather = DTSInst->getTemp();
+        int weather = DTStor::getTemp();
         std::cout << "Generated weather: " << weather << std::endl;
         std::sprintf(buf, "%i", weather);
         syslog(LOG_NOTICE, "client write");
