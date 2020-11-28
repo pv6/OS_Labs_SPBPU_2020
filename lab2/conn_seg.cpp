@@ -1,41 +1,45 @@
-#include "conn_seg.h"
+#include "conn.h"
 
-void ConnFifo::openConn() {
+std::string Conn::name_path = "/tmp/lab2";
+
+void Conn::openConn(bool isCreator) {
+    this->isCreator = isCreator;
     int shmflg = 0666;
+    key_t shm_key = ftok(Conn::name_path.c_str(), 1);
+    if (shm_key == -1)
+       throw std::runtime_error("shmkey failed, error " + std::string(strerror(errno)));
     if (isCreator)
         shmflg |= IPC_CREAT;
-    this->id = shmget(id, sizeof(DTO), shmflg);
+    this->id = shmget(shm_key, sizeof(char), shmflg);
     if (this->id == -1)
         throw std::runtime_error("shmget failed, error " + std::string(strerror(errno)));
+    this->ptr_map = (char *)shmat(id, nullptr, 0);
 }
 
-void ConnFifo::readConn(char *buf, size_t count) {
+void Conn::readConn(char *buf, size_t count) {
     if (buf == nullptr)
 	    throw std::runtime_error("nullptr buf passed into seg reading");
-    if (count != msgSize)
+    if (count > msgSize)
 	    throw std::runtime_error("wrong msg size, it's should be 10: dd.mm.yyyy");
-    char* buf_r = (char *)shmat(id, nullptr, 0);
-    memcpy(buf, buf_r, count);
+    memcpy(buf, this->ptr_map, count - 1);
     if (buf == (char*) -1) {
         throw std::runtime_error("reading error " + std::string(strerror(errno)));
     }
-    shmdt(buf);
 }
 
-void ConnFifo::writeConn(char *buf, size_t count) {
+void Conn::writeConn(char *buf, size_t count) {
     if (buf == nullptr)
 	    throw std::runtime_error("nullptr buf passed into seg writing");
-    if (count != msgSize)
+    if (count > msgSize)
 	    throw std::runtime_error("wrong msg size, it's should be 10: dd.mm.yyyy");
-    char* shm_buf;
-    buf_w = (char*)shmat(id, nullptr, 0);
-    if (buf_w == (char*) -1)
+    memcpy(this->ptr_map, buf, count - 1);
+    if (this->ptr_map == (char*) -1)
         throw std::runtime_error("writting error +" + std::string(strerror(errno)));
-    memcpy(buf_w, buf, count);
-    shmdt(buf_w);
 }
 
-void ConnFifo::closeConn() {
+void Conn::closeConn() {
     if (isCreator && shmctl(id, IPC_RMID, nullptr) < 0)
+        throw std::runtime_error("close error +" + std::string(strerror(errno)));
+    if (shmdt(this->ptr_map) == -1)
         throw std::runtime_error("close error +" + std::string(strerror(errno)));
 }

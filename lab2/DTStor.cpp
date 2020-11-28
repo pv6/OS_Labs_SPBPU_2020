@@ -1,17 +1,19 @@
 #include "DTStor.h"
 
-DTStor* DTStor::getDTStor(const std::string str_date){
+std::map<long, int> DTStor::temp_map;
+
+DTStor* DTStor::getDTStor(const std::string &str_date){
     if (str_date.length() != 10)
-        throw std::runtime_error("wrong length of date: " + std::to_string(repr.length()) + ", string = " + repr);
+        throw std::runtime_error("wrong length of date: " + std::to_string(str_date.length()) + ", string = " + str_date);
     static const char del = '.';
     static const int firstDelPos = 2;
     static const int secondDelPos = 5;
     if (str_date[firstDelPos] != del || str_date[secondDelPos] != del)
         throw std::runtime_error("wrong or missed delimeters where they expected");
     static const int strStart = 0;
-    std::string dayStr = repr.substr(strStart, firstDelPos);
-    std::string monthStr = repr.substr(firstDelPos + 1, secondDelPos - (firstDelPos + 1));
-    std::string yearStr = repr.substr(secondDelPos + 1);
+    std::string dayStr = str_date.substr(strStart, firstDelPos);
+    std::string monthStr = str_date.substr(firstDelPos + 1, secondDelPos - (firstDelPos + 1));
+    std::string yearStr = str_date.substr(secondDelPos + 1);
     static const unsigned int day = std::stoi(dayStr);
     static const unsigned int month = std::stoi(monthStr);
     static const unsigned int year = std::stoi(yearStr);
@@ -32,20 +34,19 @@ bool DTStor::validate(unsigned int v_day, unsigned int v_month, unsigned int v_y
             return false;
         return true;
     }
-    if (day > days_lim[month - 1])
+    if (v_day > days_lim[v_month - 1])
         return false;
     return true;
 }
 
 int DTStor::getTemp(){
     long date = this->year * 10000 + this->month * 100 + this->day;
-    auto it = DTStor::temp_map.find(date);
-    if (it != DTStor::temp_map.end()) {
-        return it->second;
-    }
-    std::minstd_rand generator(date);
-    std::uniform_int_distribution<int> distribution(ConnHelper::MIN_TEMPERATURE, ConnHelper::MAX_TEMPERATURE);
-    int weather = distribution(generator);
-    DTStor::temp_map.insert(std::pair<long, int>(date, weather));
-    return weather;
+    //std::minstd_rand generator(date);
+    //std::uniform_int_distribution<int> distribution(ConnHelper::MIN_TEMPERATURE, ConnHelper::MAX_TEMPERATURE);
+    auto it = temp_map.find(date);
+    if (it != temp_map.end())
+       return it->second;
+    int temperature = int(ConnHelper::MIN_TEMPERATURE + rand() % (ConnHelper::MAX_TEMPERATURE - ConnHelper::MIN_TEMPERATURE + 1)); 
+    temp_map.insert(std::pair<long, int>(date, temperature));
+    return temperature;
 }

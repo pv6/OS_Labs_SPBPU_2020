@@ -6,6 +6,7 @@
 #include "ConnHelper.h"
 #include <stdexcept>
 #include <random>
+#include <cstdlib>
 
 
 class DTStor{

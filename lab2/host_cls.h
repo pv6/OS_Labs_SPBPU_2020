@@ -4,6 +4,7 @@
 #include <semaphore.h>
 #include <syslog.h>
 #include <iostream>
+#include <fstream>
 #include <csignal>
 #include <cstring>
 #include <random>
@@ -22,17 +23,16 @@ public:
     static Host &getInstance();
     void openConn();
     void termHost();
-    void startHost(const std::string& inputFile, const std::string& outputFile);
+    void startHost(const char* inputFile, const char* outputFile);
 private:
     void HostWait();
     bool isWork = true;
     HostConnInfo hci;
-    bool isWork = true;
     Conn connection;
     int pid;
-    static void handleSignal(int sig, siginfo_t *info, void *context);
-    sem_t *host_semaphore;
-    sem_t *client_semaphore;
+    static void signalHandler(int sig, siginfo_t *info, void *context);
+    sem_t *host_semaphore{};
+    sem_t *client_semaphore{};
     Host();
 };
 
