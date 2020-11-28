@@ -1,6 +1,8 @@
 #ifndef CONNHELPER_H_INCLUDED
 #define CONNHELPER_H_INCLUDED
 
+#include <string>
+
 class ConnHelper{
 public:
     static const std::string SEM_HOST_NAME;
