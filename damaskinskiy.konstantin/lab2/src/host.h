@@ -14,8 +14,9 @@ class Host
 {
 public:
     void setupPredictorCount( size_t count );
-    static std::shared_ptr<Host> get();
+    static Host & get();
     void run( std::string const& date );
+    ~Host();
 private:
     struct ThreadData
     {
@@ -27,6 +28,8 @@ private:
     static void * requestForecast( void * );
     static void sigHandler( int signum, siginfo_t* info, void* ptr );
 
+    void terminate();
+
     Host & operator=( Host const & ) = delete;
     Host( Host &  ) = delete;
     Host( Host && ) = delete;
@@ -37,7 +40,8 @@ private:
     std::vector<pthread_t> predictorThr;
     std::set<__pid_t> predictorPid;
 
-    size_t predictorCount;
+    size_t estPredCount;
+    size_t connPredCount = 0;
 
-    static std::shared_ptr<Host> instance;
+    static Host instance;
 };

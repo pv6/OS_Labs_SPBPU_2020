@@ -14,11 +14,13 @@ public:
     void create( std::string const& name );
     void decrement();
     void timedDecrement();
+    void unlink();
     void increment();
     ~Semaphore();
 private:
     void validate(const int rc, const std::string& caller) const;
-    sem_t *sem;
+    sem_t *sem = nullptr;
+    const char *name;
     const int timeoutSec = 5;
 };
 
