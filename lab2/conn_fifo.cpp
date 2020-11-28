@@ -5,9 +5,8 @@ std::string Conn::name_path = "/tmp/lab2/fifo_6";
 void Conn::openConn(bool isCreator) {
     this->isCreator = isCreator;
     //int flg = 0777;
-    if (isCreator)
-        std::cout << mkfifo(Conn::name_path.c_str(), 0777) << std::endl;
-        //throw std::runtime_error("fifo failed, error " + std::string(strerror(errno)));
+    if (isCreator && mkfifo(Conn::name_path.c_str(), 0777) == -1)
+        throw std::runtime_error("fifo failed, error " + std::string(strerror(errno)));
     this->id = open(Conn::name_path.c_str(), O_RDWR);
     if (this->id == -1)
             throw std::runtime_error("fifo failed, error " + std::string(strerror(errno)));

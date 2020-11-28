@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <random>
 #include <cstdlib>
-
+#include <ctime>
 
 class DTStor{
 public:

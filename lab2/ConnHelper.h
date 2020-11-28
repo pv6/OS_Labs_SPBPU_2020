@@ -15,4 +15,5 @@ public:
 };
 
 
+
 #endif // CONNHELPER_H_INCLUDED

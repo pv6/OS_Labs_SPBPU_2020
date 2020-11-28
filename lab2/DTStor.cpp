@@ -41,11 +41,10 @@ bool DTStor::validate(unsigned int v_day, unsigned int v_month, unsigned int v_y
 
 int DTStor::getTemp(){
     long date = this->year * 10000 + this->month * 100 + this->day;
-    //std::minstd_rand generator(date);
-    //std::uniform_int_distribution<int> distribution(ConnHelper::MIN_TEMPERATURE, ConnHelper::MAX_TEMPERATURE);
     auto it = temp_map.find(date);
     if (it != temp_map.end())
        return it->second;
+    srand(time(NULL));
     int temperature = int(ConnHelper::MIN_TEMPERATURE + rand() % (ConnHelper::MAX_TEMPERATURE - ConnHelper::MIN_TEMPERATURE + 1)); 
     temp_map.insert(std::pair<long, int>(date, temperature));
     return temperature;
