@@ -6,16 +6,16 @@
 #include "conn.h"
 
 bool Conn::open(int id, bool create) {
-    umask(0000);
     isCreated = create;
     name = "/tmp/fifo_DK_predictor_" + std::to_string(id);
 
     if (!isCreated) {
-        int res = mkfifo(name.c_str(), 0777);
+        int res = mkfifo(name.c_str(), 0666);
         if (res == -1) {
             syslog(LOG_ERR, "Could not create FIFO: %s", strerror(errno));
             return false;
         }
+        isCreated = true;
     }
     descr = ::open(name.c_str(), O_RDWR);
     if (descr == -1) {
@@ -36,7 +36,7 @@ bool Conn::read(void* buf, size_t count) {
 
 bool Conn::write(void* buf, size_t count) {
     if (::write(descr, buf, count) == -1) {
-        syslog(LOG_ERR, "%s", strerror(errno));
+        syslog(LOG_ERR, "FIFO error: %s", strerror(errno));
         return false;
     }
     return true;

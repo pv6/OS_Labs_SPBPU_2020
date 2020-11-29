@@ -12,7 +12,7 @@ bool Conn::open( int id, bool create ) {
 
     int fd;
     if (!isCreated)
-        fd = shm_open(name.c_str(), O_CREAT, 0666);
+        fd = shm_open(name.c_str(), O_CREAT | O_RDWR, 0666);
     else
         fd = shm_open(name.c_str(), O_RDWR, 0666);
 

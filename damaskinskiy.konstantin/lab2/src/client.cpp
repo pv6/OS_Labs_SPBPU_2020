@@ -55,7 +55,7 @@ int main( int argc, char *argv[] )
     else
     {
         syslog(LOG_ERR, "Failed to connect to host");
-        pred.softTerminate();
+        pred.hardTerminate();
     }
 
     return 0;

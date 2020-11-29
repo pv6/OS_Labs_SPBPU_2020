@@ -7,7 +7,7 @@
 
 bool Conn::open(int id, bool create) {
     isCreated = create;
-    name = "/mq_DK_predictor_" + std::to_string(id);
+    name = "/mq_DK_pred" + std::to_string(id);
 
     if (!isCreated) {
         struct mq_attr attr;
@@ -15,7 +15,6 @@ bool Conn::open(int id, bool create) {
         attr.mq_maxmsg = 10;
         attr.mq_msgsize = msgmaxlen;
         attr.mq_curmsgs = 0;
-        mq_unlink(name.c_str());
         descr = mq_open(name.c_str(), O_RDWR | O_CREAT, 0666, &attr);
     } else {
         descr = mq_open(name.c_str(), O_RDWR);

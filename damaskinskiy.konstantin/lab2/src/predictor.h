@@ -14,11 +14,11 @@ public:
     bool connectToHost();
     void predict();
     void softTerminate();
+    void hardTerminate();
 
     static Predictor & get();
 
 private:
-    void hardTerminate();
     Predictor();
 
     Predictor( Predictor const& ) = delete;
@@ -33,6 +33,7 @@ private:
         semHost;
 
     bool run = true;
+    int number;
 
     static Predictor instance;
 };

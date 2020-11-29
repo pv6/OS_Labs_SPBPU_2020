@@ -113,10 +113,11 @@ void * Host::requestForecast( void *date_void )
         char *answer = new char[11]{0};
         // get sizeof(int)
         conn.read(answer, 10);
-        syslog(LOG_INFO, "Host: predictor %i processed", datum->predictorPid);
+        syslog(LOG_INFO, "Host: predictor %i predicted %s", datum->predictorPid, answer);
 
         return answer;
-    } catch (std::exception &e)
+    }
+    catch (std::exception &e)
     {
         syslog(LOG_ERR, "Request forecast: exception caught: %s",
                e.what());
@@ -163,11 +164,10 @@ void Host::run( std::string const& date )
         datum->predictorPid = p;
 //        pthread_create(&predictorThr[idx++], nullptr, requestForecast,
 //                       static_cast<void *>(datum));
-         predictions[idx++] = (char*)requestForecast(static_cast<void *>(datum));
+         predictions[idx++] = static_cast<char*>(requestForecast(static_cast<void *>(datum)));
     }
 
 //    // collect predictions
-//    std::vector<char *> predictions(estPredCount);
 //    idx = 0;
 //    for (auto &p : predictorThr)
 //    {
@@ -175,7 +175,6 @@ void Host::run( std::string const& date )
 //        pthread_join(p, &pred);
 //        predictions[idx++] = static_cast<char *>(pred);
 //    }
-
 
     syslog(LOG_ERR, "All threads finished");
 
@@ -218,6 +217,8 @@ int main( int argc, char *argv[] )
     {
         std::string d;
         ifs >> d;
+        if (d.size() != 10)
+            continue;
         dates.push_back(d);
     }
 

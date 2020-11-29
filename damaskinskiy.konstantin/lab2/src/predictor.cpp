@@ -16,6 +16,11 @@ Predictor::Predictor()
 
     sigaction(SIGTERM, &act, nullptr);
     sigaction(SIGUSR1, &act, nullptr);
+
+    std::random_device rd;
+    std::default_random_engine gen(rd());
+    std::uniform_int_distribution<int> distribution(-500, 500);
+    number = distribution(gen);
 }
 
 void Predictor::sigHandler( int signum, siginfo_t *si, void *ucontext )
@@ -69,12 +74,6 @@ bool Predictor::connectToHost()
 
 void Predictor::predict()
 {
-    std::random_device rd;
-    std::default_random_engine gen(rd());
-    std::uniform_int_distribution<int> distribution(-30, 40);
-    // TODO dependency on date
-    int number = distribution(gen);
-
     try
     {
         // semaphore is not created =>
@@ -98,14 +97,16 @@ void Predictor::predict()
             char date[11] = {0};
             conn.read(date, 10);
             syslog(LOG_INFO, "pid %i: read date %s", getpid(), date);
-            memset(date, 0, 11);
-            syslog(LOG_INFO, "Predictor %i predicts temperature %i for date %s",
-                   getpid(), number, date);
 
-            sprintf(date, "%i", number);
-            syslog(LOG_INFO, "Sending %s...", date);
-            conn.write(date, 3);
-            syslog(LOG_INFO, "Predictor %i successfully sent prediction", getpid());
+            char ans[11] = {0};
+            std::string datestr(date);
+            int
+                    d = std::stoi(datestr.substr(0, 2)),
+                    m = std::stoi(datestr.substr(3, 2)),
+                    y = std::stoi(datestr.substr(6, 4));
+            sprintf(ans, "%i", (number * (d + m + y)) % 70 - 30);
+            conn.write(ans, 10);
+            syslog(LOG_INFO, "Predictor %i successfully sent prediction %s", getpid(), ans);
 
             semHost.increment();
         }

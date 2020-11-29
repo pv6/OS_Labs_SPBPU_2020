@@ -44,7 +44,7 @@ void Semaphore::close()
 
 void Semaphore::create(const std::string &name)
 {
-    sem = sem_open(("/" + name).c_str(), O_CREAT | O_EXCL, 0666, 1);
+    sem = sem_open(("/" + name).c_str(), O_CREAT | O_EXCL, 0666, 0);
     if (sem == SEM_FAILED)
         validate(-1, "sem_open: create");
 }
@@ -62,7 +62,8 @@ Semaphore::~Semaphore() {
 
 void Semaphore::decrement() {
     int rc = sem_wait(sem);
-    //while ((rc = sem_wait(sem)) == EINTR);  // loop
+//    int rc;
+//    while ((rc = sem_wait(sem)) == EINTR);  // loop
     validate(rc, "wait");
 }
 
@@ -76,7 +77,8 @@ void Semaphore::timedDecrement() {
 
     ts.tv_sec += timeoutSec;
 
-    while ((rc = sem_timedwait(sem, &ts)) == EINTR);
+    //while ((rc = sem_timedwait(sem, &ts)) == EINTR);
+    rc = sem_timedwait(sem, &ts);
     validate(rc, "timedWait");
 }
 
