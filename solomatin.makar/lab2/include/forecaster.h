@@ -4,12 +4,12 @@
 #include "date.h"
 
 class Forecaster {
-    const double timeout = 10;
-    const int sleepTime = 1;
-    bool signalHandled = false;
+    bool signalHandled = false; 
+    int prediction;   // current prediciton on date
+    int hostPid = -1; // pid of host
+    Date date;        // date to forecast
 
-    int hostPid = -1;
-    Date date;
+    
 
     Forecaster();
     Forecaster(const Forecaster&) = delete;
@@ -21,15 +21,12 @@ public:
         static Forecaster instance;
         return instance;
     }
-    bool handshake();
 
     bool parseHostPid(int argc, char *argv[]);
-    int getHostPid() { return hostPid; }
 
-    int predict();
+    bool handshake();
+    void predict();
+    void sendPrediction();
 
-    Date getDate() { return date; }
-
-    int forecast();
     ~Forecaster();
 };

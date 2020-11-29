@@ -1,0 +1,1 @@
+#define TIMEOUT 10  // timeout for synchronous operations

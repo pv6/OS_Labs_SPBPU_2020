@@ -16,6 +16,9 @@ class Server {
     pthread_mutex_t clientsMutex;
     std::map<int, Connection *> clients;
 
+    pthread_mutex_t pidMutex;
+    int pid = -1;
+
     Server();
     Server(const Server &) = delete;
     Server &operator=(const Server &) = delete;
