@@ -16,6 +16,7 @@ public:
     void setupPredictorCount( size_t count );
     static Host & get();
     void run( std::string const& date );
+    void terminate();
     ~Host();
 private:
     struct ThreadData
@@ -27,8 +28,6 @@ private:
     Host();
     static void * requestForecast( void * );
     static void sigHandler( int signum, siginfo_t* info, void* ptr );
-
-    void terminate();
 
     Host & operator=( Host const & ) = delete;
     Host( Host &  ) = delete;

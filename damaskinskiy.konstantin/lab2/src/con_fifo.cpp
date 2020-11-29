@@ -5,11 +5,10 @@
 #include <unistd.h>
 #include "conn.h"
 
-bool Conn::open(int c_id, bool create) {
+bool Conn::open(int id, bool create) {
     umask(0000);
     isCreated = create;
-    id = c_id;
-    name = "/tmp/fifo" + std::to_string(id);
+    name = "/tmp/fifo_DK_predictor_" + std::to_string(id);
 
     if (isCreated) {
         int res = mkfifo(name.c_str(), 0777);
@@ -23,13 +22,13 @@ bool Conn::open(int c_id, bool create) {
         syslog(LOG_ERR, "%s", strerror(errno));
         return false;
     }
-    syslog(LOG_NOTICE, "FIFO connection is set");
+    syslog(LOG_INFO, "FIFO connection is set");
     return true;
 }
 
 bool Conn::read(void* buf, size_t count) {
     if (::read(descr, buf, count) == -1) {
-        syslog(LOG_ERR, "%s", strerror(errno));
+        syslog(LOG_ERR, "FIFO error: %s", strerror(errno));
         return false;
     }
     return true;
@@ -48,6 +47,6 @@ bool Conn::close() {
     if (isCreated) {
         remove(name.c_str());
     }
-    syslog(LOG_NOTICE, "Fifo connection is closed");
+    syslog(LOG_INFO, "FIFO connection is closed");
     return true;
 }

@@ -14,6 +14,7 @@ void Host::sigHandler( int signum, siginfo_t* info, void* ptr ) {
     switch (signum)
     {
     case SIGUSR1:
+    {
         if (host.predictorPid.find(info->si_pid) != host.predictorPid.end())
         {
             syslog(LOG_INFO, "Predictor pid %i is already a registered predictor",
@@ -28,9 +29,24 @@ void Host::sigHandler( int signum, siginfo_t* info, void* ptr ) {
                    info->si_pid, host.estPredCount);
             break;
         }
+        syslog(LOG_INFO, "Received predictor pid %i", info->si_pid);
         host.connPredCount++;
         host.predictorPid.insert(info->si_pid);
+
+        try
+        {
+            Conn conn;
+            conn.open(info->si_pid, false);
+            syslog(LOG_INFO, "Successfully initialized connection to pid %i", info->si_pid);
+        }
+        catch (std::exception &e)
+        {
+            syslog(LOG_ERR, "Host couldn't initialize connection channel: %s",
+                   e.what());
+        }
+
         break;
+    }
     default:
         syslog(LOG_INFO, "Received signal: %s", strsignal(signum));
     }
@@ -46,15 +62,6 @@ void Host::terminate()
 
 Host::Host()
 {
-    try
-    {
-        semHost.create("host_dm_forecast");
-    }
-    catch (std::exception &e)
-    {
-        syslog(LOG_ERR, "Host semaphore creation failed: %s", e.what());
-        exit(EXIT_FAILURE);
-    }
     struct sigaction act;
     act.sa_sigaction = sigHandler;
     act.sa_flags = SA_SIGINFO;
@@ -63,7 +70,6 @@ Host::Host()
 
 Host::~Host()
 {
-    semHost.unlink();
 }
 
 void Host::setupPredictorCount(size_t count)
@@ -76,29 +82,36 @@ void * Host::requestForecast( void *date_void )
 {
     ThreadData *datum = static_cast<ThreadData *>(date_void);
 
-    Conn conn;
-    conn.open(datum->predictorPid, true); // ???
-    Host::get().semHost.timedDecrement();  // wait until host can write
-    conn.write(
-                const_cast<void *>(reinterpret_cast<const void*>(datum->date.c_str())),
-                datum->date.length());
+    auto &host = Host::get();
 
-    // get client semaphore
-    Semaphore semClient;
-    semClient.open("predictor" + std::to_string(datum->predictorPid));
-    semClient.increment();  // let client read & write
-    Host::get().semHost.timedDecrement(); // wait until host can read
+    try
+    {
+        Conn conn;
+        conn.open(datum->predictorPid, true);
+        //Host::get().semHost.timedDecrement();  // wait until host can write
+        conn.write(
+                    const_cast<void *>(reinterpret_cast<const void*>(datum->date.c_str())),
+                    datum->date.length());
 
-    char *answer = new char[10];
-    // get sizeof(int)
-    conn.read(answer, sizeof(int));
-    Host::get().semHost.increment();
-    syslog(LOG_INFO, "Host: predictor %i processed", datum->predictorPid);
-    Host::get().semHost.timedDecrement();  // wait until host can write
-    semClient.increment();  // let client receive exit message
-    semClient.close();
+        // get client semaphore
+        Semaphore semClient;
+        semClient.open("predictor" + std::to_string(datum->predictorPid));
+        semClient.increment();  // let client read & write
+        host.semHost.timedDecrement(); // wait until host can read
 
-    return answer;
+        char *answer = new char[10];
+        // get sizeof(int)
+        conn.read(answer, sizeof(int));
+        syslog(LOG_INFO, "Host: predictor %i processed", datum->predictorPid);
+        host.semHost.timedDecrement();  // wait until host can write
+
+        return answer;
+    } catch (std::exception &e)
+    {
+        syslog(LOG_ERR, "Request forecast: exception caught: %s",
+               e.what());
+        return nullptr;
+    }
 }
 
 Host & Host::get()
@@ -108,72 +121,110 @@ Host & Host::get()
 
 void Host::run( std::string const& date )
 {
-    if (connPredCount != estPredCount)
-    {
-        std::cout << "Estimated: " <<  estPredCount << " predictors\n";
-        std::cout << "Connected: " << connPredCount << " predictors\n";
-    }
+    // waiting for predictors attach
+    while (connPredCount != estPredCount)
+        ;
+
     // require predictions
+    std::vector<char *> predictions(estPredCount);
     size_t idx = 0;
+
     for (auto &p : predictorPid)
     {
+        auto semHostName = "DK_forecast_host" + std::to_string(p);
+
+        // open or create needed host semaphore
+        // for first date request -- creation.
+        // later -- just open.
+        try
+        {
+            semHost.tryOpen(semHostName);
+        }
+        catch (std::exception &e)
+        {
+            syslog(LOG_ERR, "Host semaphore creation failed: %s", e.what());
+            terminate();
+            exit(EXIT_FAILURE);
+        }
+
+        syslog(LOG_INFO, "Started thread creation");
         ThreadData *datum = new ThreadData;
         datum->date = date;
         datum->predictorPid = p;
-        pthread_create(&predictorThr[idx++], nullptr, requestForecast,
-                       static_cast<void *>(datum));
+//        pthread_create(&predictorThr[idx++], nullptr, requestForecast,
+//                       static_cast<void *>(datum));
+         predictions[idx++] = (char*)requestForecast(static_cast<void *>(datum));
     }
 
-    // collect predictions
-    std::vector<char *> predictions(estPredCount);
-    idx = 0;
-    for (auto &p : predictorThr)
-    {
-        void *pred;
-        pthread_join(p, &pred);
-        predictions[idx++] = static_cast<char *>(pred);
-    }
+//    // collect predictions
+//    std::vector<char *> predictions(estPredCount);
+//    idx = 0;
+//    for (auto &p : predictorThr)
+//    {
+//        void *pred;
+//        pthread_join(p, &pred);
+//        predictions[idx++] = static_cast<char *>(pred);
+//    }
+
+
+    syslog(LOG_ERR, "All threads finished");
 
     // output predictions
     idx = 0;
     for (auto &pid : predictorPid)
-        std::cout << "Predictor " << pid << ": " << predictions[idx ] << "\n";
+    {
+        std::cout << "Predictor " << pid << ": " << predictions[idx] << "\n";
+        delete []predictions[idx];
+    }
 }
 
 int main( int argc, char *argv[] )
 {
     openlog("DK_forecast_host", LOG_PID | LOG_NDELAY | LOG_PERROR, LOG_USER);
-    if (argc != 3)
+    if (argc != 5)
     {
         syslog(LOG_INFO, "Usage: "
-                         "--predictors predictor count\n");
+                         "--predictors predictor_count --file file\n");
         return -1;
     }
 
-    if (argc >= 2 && strcmp(argv[1], "--predictors"))
+    if (strcmp(argv[1], "--predictors") || strcmp(argv[3], "--file"))
     {
         syslog(LOG_INFO, "Usage: "
-                         "--predictors predictor count\n");
+                         "--predictors predictor_count --file file\n");
         return -1;
     }
 
+    /* Collect dates */
+    std::ifstream ifs(argv[4]);
+    if (!ifs)
+    {
+        syslog(LOG_ERR, "Couldn't find file %s", argv[4]);
+        return -1;
+    }
+
+    std::vector<std::string> dates;
+    while (ifs)
+    {
+        std::string d;
+        ifs >> d;
+        dates.push_back(d);
+    }
+
+    /* Read predictors count */
     size_t clientCount = std::stoul(argv[2]);
 
     auto &host = Host::get();
     host.setupPredictorCount(clientCount);
 
-    bool runForecast = true;
-    while (runForecast)
+    for (auto &date: dates)
     {
-        std::cout << "Input date dd.mm.yyyy or 0 to exit: ";
-        std::string date;
-        std::cin >> date;
-
-        if (date == "0")
-            runForecast = false;
-        else
-            host.run(date);
+        /* Per date processing */
+        syslog(LOG_INFO, "Predicting date: %s...", date.c_str());
+        host.run(date);
     }
+
+    host.terminate();
 
     return 0;
 }

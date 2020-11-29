@@ -13,8 +13,7 @@ int main( int argc, char *argv[] )
     // this is predictor (client) pid!
     char pidstr[10];
     sprintf(pidstr, "%i", getpid());
-    char logname[100] = "DK_forecast_predictor";
-    openlog(strcat(logname, pidstr),
+    openlog("DK_forecast_predictor",
             LOG_PID | LOG_NDELAY | LOG_PERROR, LOG_USER);
 
     // and this is host pid!
@@ -33,7 +32,8 @@ int main( int argc, char *argv[] )
     }
 
     int pid;
-    try {
+    try
+    {
         pid = std::stoi(argv[2]);
     }
     catch (std::exception &) {
@@ -43,16 +43,20 @@ int main( int argc, char *argv[] )
     }
 
     Predictor &pred = Predictor::get();
-
     pred.setHostPid(pid);
+
     if (pred.connectToHost())
     {
         syslog(LOG_INFO, "Successfuly connected predictor %i to host!", getpid());
         pred.predict();
         syslog(LOG_INFO, "Prediction from %i finished!", getpid());
         closelog();
-        return 0;
+    }
+    else
+    {
+        syslog(LOG_ERR, "Failed to connect to host");
+        pred.terminate();
     }
 
-    return 1;
+    return 0;
 }

@@ -31,7 +31,7 @@ private:
         semPred,
         semHost;
 
-    bool run = false;
+    bool run = true;
 
     static Predictor instance;
 };

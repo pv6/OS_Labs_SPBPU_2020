@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <stdexcept>
 #include <cstring>
+#include <syslog.h>
 
 #include "semaphore.h"
 
@@ -12,21 +13,37 @@ Semaphore::Semaphore( std::string const& name ) :
     open(name);
 }
 
+void Semaphore::tryOpen(const std::string &name)
+{
+    try
+    {
+        open(name);
+        return;
+    }
+    catch (...)
+    {
+        syslog(LOG_INFO, "Couldn't open semaphore. Create it!");
+        create(name);
+    }
+}
+
 void Semaphore::open(const std::string &name)
 {
-    sem = sem_open(name.c_str(), O_RDWR);
+    sem = sem_open(("/" + name).c_str(), O_RDWR);
     if (sem == SEM_FAILED)
         validate(-1, "sem_open: open");
 }
 
 void Semaphore::close()
 {
-    validate(sem_close(sem), "sem_close");
+    if (sem != nullptr)
+        validate(sem_close(sem), "sem_close");
+    sem = nullptr;
 }
 
 void Semaphore::create(const std::string &name)
 {
-    sem = sem_open(name.c_str(), O_CREAT/* & O_EXCL*/);
+    sem = sem_open(("/" + name).c_str(), O_CREAT | O_EXCL, 0666, 1);
     if (sem == SEM_FAILED)
         validate(-1, "sem_open: create");
 }
@@ -43,8 +60,8 @@ Semaphore::~Semaphore() {
 }
 
 void Semaphore::decrement() {
-    int rc;
-    while ((rc = sem_wait(sem)) == EINTR);  // loop
+    int rc = sem_wait(sem);
+    //while ((rc = sem_wait(sem)) == EINTR);  // loop
     validate(rc, "wait");
 }
 
@@ -62,11 +79,11 @@ void Semaphore::timedDecrement() {
     validate(rc, "timedWait");
 }
 
-void Semaphore::unlink()
-{
-    if (sem != nullptr)
-        sem_unlink(name);
-}
+//void Semaphore::unlink()
+//{
+//    if (sem != nullptr)
+//        sem_unlink(name);
+//}
 
 void Semaphore::increment() {
     sem_post(sem);

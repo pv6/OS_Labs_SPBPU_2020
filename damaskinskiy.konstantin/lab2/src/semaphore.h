@@ -9,19 +9,19 @@ class Semaphore
 public:
     Semaphore();
     Semaphore( std::string const& name );
+    void tryOpen( std::string const& name );
     void open( std::string const& name );
     void close();
     void create( std::string const& name );
     void decrement();
     void timedDecrement();
-    void unlink();
     void increment();
     ~Semaphore();
 private:
     void validate(const int rc, const std::string& caller) const;
     sem_t *sem = nullptr;
     const char *name;
-    const int timeoutSec = 5;
+    const int timeoutSec = 500; // TODO fix 5
 };
 
 #endif // SEMAPHORE_H

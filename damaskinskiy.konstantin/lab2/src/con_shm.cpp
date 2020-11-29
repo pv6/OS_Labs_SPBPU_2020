@@ -5,15 +5,15 @@
 #include <cstring>
 #include "conn.h"
 
-bool Conn::open(int c_id, bool create) {
+bool Conn::open(int id, bool create) {
+
     (void)create;
-    id = c_id;
-    name = "/shm" + std::to_string(c_id);
+    name = "/shm_DK_predictor_" + std::to_string(id);
     int fd = shm_open(name.c_str(), O_RDWR | O_CREAT, 0666);
     if (fd != -1) {
-        ftruncate(fd, sizeof(int));
+        ftruncate(fd, msgmaxlen);
         f_descr = static_cast<int*>(
-                    mmap(nullptr, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
+                    mmap(nullptr, msgmaxlen, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
         if (f_descr == MAP_FAILED) {
             syslog(LOG_ERR, "Mmap failed");
             return false;
@@ -34,7 +34,7 @@ bool Conn::write(void* buf, size_t count) {
 }
 
 bool Conn::close() {
-    munmap(f_descr, sizeof(int));
+    munmap(f_descr, msgmaxlen);
     shm_unlink(name.c_str());
     syslog(LOG_INFO, "SHM connection is closed");
     return true;
