@@ -13,11 +13,12 @@ public:
     void setHostPid( __pid_t pid );
     bool connectToHost();
     void predict();
-    void terminate();
+    void softTerminate();
 
     static Predictor & get();
 
 private:
+    void hardTerminate();
     Predictor();
 
     Predictor( Predictor const& ) = delete;

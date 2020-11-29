@@ -5,16 +5,25 @@
 #include <cstring>
 #include "conn.h"
 
-bool Conn::open(int id, bool create) {
+bool Conn::open( int id, bool create ) {
 
-    (void)create;
+    isCreated = create;
     name = "/shm_DK_predictor_" + std::to_string(id);
-    int fd = shm_open(name.c_str(), O_RDWR | O_CREAT, 0666);
-    if (fd != -1) {
+
+    int fd;
+    if (!isCreated)
+        fd = shm_open(name.c_str(), O_CREAT, 0666);
+    else
+        fd = shm_open(name.c_str(), O_RDWR, 0666);
+
+    if (fd != -1)
+    {
         ftruncate(fd, msgmaxlen);
         f_descr = static_cast<int*>(
-                    mmap(nullptr, msgmaxlen, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
-        if (f_descr == MAP_FAILED) {
+                    mmap(nullptr, static_cast<size_t>(msgmaxlen),
+                         PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
+        if (f_descr == MAP_FAILED)
+        {
             syslog(LOG_ERR, "Mmap failed");
             return false;
         }

@@ -10,16 +10,16 @@ bool Conn::open(int id, bool create) {
     isCreated = create;
     name = "/tmp/fifo_DK_predictor_" + std::to_string(id);
 
-    if (isCreated) {
+    if (!isCreated) {
         int res = mkfifo(name.c_str(), 0777);
         if (res == -1) {
-            syslog(LOG_ERR, "Could not create fifo");
-            syslog(LOG_ERR, "%s", strerror(errno));
+            syslog(LOG_ERR, "Could not create FIFO: %s", strerror(errno));
+            return false;
         }
     }
     descr = ::open(name.c_str(), O_RDWR);
     if (descr == -1) {
-        syslog(LOG_ERR, "%s", strerror(errno));
+        syslog(LOG_ERR, "Couldn't open FIFO: %s", strerror(errno));
         return false;
     }
     syslog(LOG_INFO, "FIFO connection is set");

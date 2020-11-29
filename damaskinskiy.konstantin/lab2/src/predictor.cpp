@@ -31,7 +31,7 @@ void Predictor::sigHandler( int signum, siginfo_t *si, void *ucontext )
         break;
     }
     case SIGUSR2:
-        instance.terminate();
+        instance.softTerminate();
         break;
     default:
         syslog(LOG_ERR, "Unhandled signal: %s", strsignal(signum));
@@ -77,33 +77,47 @@ void Predictor::predict()
 
     try
     {
-        // open host semaphore
-        std::string semNameHost = "DK_forecast_host" + std::to_string(getpid());
-        semHost.open(semNameHost.c_str());
+        // semaphore is not created =>
+        // not all clients are connected to host => idle
+        bool isSemReady = false;
+        while (!isSemReady)
+        {
+            try
+            {
+                std::string semNameHost = "DK_forecast_host" + std::to_string(getpid());
+                semHost.open(semNameHost.c_str());
+                isSemReady = true;
+            } catch (...) {}
+        }
 
         while (run)
         {
             syslog(LOG_INFO, "Locked predictor pid %i", getpid());
-            semPred.decrement(); // does not decrements TODO
+            semPred.decrement();
             syslog(LOG_INFO, "Unlocked predictor pid %i", getpid());
             char date[11] = {0};
             conn.read(date, 10);
-            conn.write(&number, sizeof(int));
+            syslog(LOG_INFO, "pid %i: read date %s", getpid(), date);
+            memset(date, 0, 11);
             syslog(LOG_INFO, "Predictor %i predicts temperature %i for date %s",
                    getpid(), number, date);
+
+            sprintf(date, "%i", number);
+            syslog(LOG_INFO, "Sending %s...", date);
+            conn.write(date, 3);
+            syslog(LOG_INFO, "Predictor %i successfully sent prediction", getpid());
 
             semHost.increment();
         }
     } catch (std::exception &e)
     {
         syslog(LOG_ERR, "Error in predict method: %s", e.what());
-        terminate();
+        hardTerminate();
     }
 }
 
-void Predictor::terminate()
+void Predictor::softTerminate()
 {
-    kill(hostPid, SIGUSR2);
     try
     {
         semPred.close();
@@ -125,4 +139,10 @@ void Predictor::terminate()
 Predictor & Predictor::get()
 {
     return instance;
+}
+
+void Predictor::hardTerminate()
+{
+    kill(hostPid, SIGUSR2);
+    softTerminate();
 }

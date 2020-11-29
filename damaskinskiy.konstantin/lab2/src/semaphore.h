@@ -21,7 +21,7 @@ private:
     void validate(const int rc, const std::string& caller) const;
     sem_t *sem = nullptr;
     const char *name;
-    const int timeoutSec = 500; // TODO fix 5
+    const int timeoutSec = 5;
 };
 
 #endif // SEMAPHORE_H

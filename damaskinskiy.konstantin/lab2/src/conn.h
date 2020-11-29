@@ -13,7 +13,7 @@ public:
     bool write( void *buf, size_t count );
 
 private:
-    const int msgmaxlen = 11;
+    const int msgmaxlen = 10;
     bool isCreated;
     std::string name;
 

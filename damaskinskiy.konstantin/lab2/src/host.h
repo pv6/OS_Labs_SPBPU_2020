@@ -16,9 +16,10 @@ public:
     void setupPredictorCount( size_t count );
     static Host & get();
     void run( std::string const& date );
-    void terminate();
+    void softTerminate();
     ~Host();
 private:
+    void hardTerminate();
     struct ThreadData
     {
         std::string date;

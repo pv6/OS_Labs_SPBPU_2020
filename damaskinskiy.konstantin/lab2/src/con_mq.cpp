@@ -9,7 +9,7 @@ bool Conn::open(int id, bool create) {
     isCreated = create;
     name = "/mq_DK_predictor_" + std::to_string(id);
 
-    if (1/*!isCreated*/) {
+    if (!isCreated) {
         struct mq_attr attr;
         attr.mq_flags = 0;
         attr.mq_maxmsg = 10;
@@ -18,7 +18,7 @@ bool Conn::open(int id, bool create) {
         mq_unlink(name.c_str());
         descr = mq_open(name.c_str(), O_RDWR | O_CREAT, 0666, &attr);
     } else {
-        descr = mq_open(name.c_str(), O_RDWR );
+        descr = mq_open(name.c_str(), O_RDWR);
     }
     if (descr == -1) {
         syslog(LOG_ERR, "MQ connection error: %s", strerror(errno));

@@ -18,12 +18,13 @@ void Semaphore::tryOpen(const std::string &name)
     try
     {
         open(name);
-        return;
+        syslog(LOG_INFO, "Semaphore %s opened!", name.c_str());
     }
     catch (...)
     {
         syslog(LOG_INFO, "Couldn't open semaphore. Create it!");
         create(name);
+        syslog(LOG_INFO, "Semaphore %s created!", name.c_str());
     }
 }
 

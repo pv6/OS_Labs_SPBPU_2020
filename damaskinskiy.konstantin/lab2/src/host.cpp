@@ -29,7 +29,7 @@ void Host::sigHandler( int signum, siginfo_t* info, void* ptr ) {
                    info->si_pid, host.estPredCount);
             break;
         }
-        syslog(LOG_INFO, "Received predictor pid %i", info->si_pid);
+        syslog(LOG_INFO, "Received signal from predictor %i", info->si_pid);
         host.connPredCount++;
         host.predictorPid.insert(info->si_pid);
 
@@ -37,7 +37,7 @@ void Host::sigHandler( int signum, siginfo_t* info, void* ptr ) {
         {
             Conn conn;
             conn.open(info->si_pid, false);
-            syslog(LOG_INFO, "Successfully initialized connection to pid %i", info->si_pid);
+            syslog(LOG_INFO, "Successfully connected to %i", info->si_pid);
         }
         catch (std::exception &e)
         {
@@ -47,17 +47,21 @@ void Host::sigHandler( int signum, siginfo_t* info, void* ptr ) {
 
         break;
     }
+    case SIGUSR2:
+        host.hardTerminate();
+        break;
+    case SIGTERM:
+        host.softTerminate();
+        break;
     default:
         syslog(LOG_INFO, "Received signal: %s", strsignal(signum));
     }
 }
 
-void Host::terminate()
+void Host::hardTerminate()
 {
     for (auto &p : predictorThr)
         pthread_cancel(p);
-    for (auto &p : predictorPid)
-        kill(p, SIGUSR2);
 }
 
 Host::Host()
@@ -70,6 +74,13 @@ Host::Host()
 
 Host::~Host()
 {
+}
+
+void Host::softTerminate()
+{
+    hardTerminate();
+    for (auto &p : predictorPid)
+        kill(p, SIGUSR2);
 }
 
 void Host::setupPredictorCount(size_t count)
@@ -99,11 +110,10 @@ void * Host::requestForecast( void *date_void )
         semClient.increment();  // let client read & write
         host.semHost.timedDecrement(); // wait until host can read
 
-        char *answer = new char[10];
+        char *answer = new char[11]{0};
         // get sizeof(int)
-        conn.read(answer, sizeof(int));
+        conn.read(answer, 10);
         syslog(LOG_INFO, "Host: predictor %i processed", datum->predictorPid);
-        host.semHost.timedDecrement();  // wait until host can write
 
         return answer;
     } catch (std::exception &e)
@@ -143,7 +153,7 @@ void Host::run( std::string const& date )
         catch (std::exception &e)
         {
             syslog(LOG_ERR, "Host semaphore creation failed: %s", e.what());
-            terminate();
+            softTerminate();
             exit(EXIT_FAILURE);
         }
 
@@ -174,7 +184,7 @@ void Host::run( std::string const& date )
     for (auto &pid : predictorPid)
     {
         std::cout << "Predictor " << pid << ": " << predictions[idx] << "\n";
-        delete []predictions[idx];
+        delete []predictions[idx++];
     }
 }
 
@@ -224,7 +234,7 @@ int main( int argc, char *argv[] )
         host.run(date);
     }
 
-    host.terminate();
+    host.softTerminate();
 
     return 0;
 }
