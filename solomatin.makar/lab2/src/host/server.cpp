@@ -20,22 +20,25 @@ void Server::handleSignal(int signum, siginfo_t* info, void* ptr) {
     std::cout << "Received SIGUSR1 from " << pid << std::endl;
 
     if (server.clients.find(pid) != server.clients.end()) {
-        std::cout << "Client with pid " << pid << "sent signal second time, closing connection" << std::endl;
+        std::cout << "Client with pid " << pid << " sent signal second time, closing connection" << std::endl;
         server.removeConnection(pid);
         return;
     }
+
+    std::cout << "New client arrived with pid " << pid << std::endl;
 
     pthread_t tid;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 
-    pthread_create(&tid, &attr, response, nullptr);
+    pthread_create(&tid, &attr, response, new int{pid});
 }
 
 void *Server::response(void *pidPointer) {
     Server &server = Server::instance();
 
     int pid = *(int *)pidPointer;
+    delete (int *)pidPointer;
     Connection *connection = new Connection(server.nextClient());
     server.addConnection(pid, connection);
 
@@ -44,10 +47,15 @@ void *Server::response(void *pidPointer) {
     sv.sival_int = connection->getId();
     sigqueue(pid, SIGUSR1, sv);
 
+    std::cout << "Sent signal back to " << pid << " that channel created" << std::endl;
+
     char *buf = server.date.serialize();
     connection->write(buf, sizeof(Date));
+
+    std::cout << "Writing date to channel" << std::endl;
     delete buf;
 
+    fflush(stdout);
     return nullptr;
 }
 
