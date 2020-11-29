@@ -36,12 +36,12 @@ void *Server::response(void *pidPointer) {
     Server &server = Server::instance();
 
     int pid = *(int *)pidPointer;
-    Connection *connection = new Connection();
+    Connection *connection = new Connection(server.nextClient());
     server.addConnection(pid, connection);
 
     // notify client that channel created
     union sigval sv;
-    sv.sival_int = connection->getFd();
+    sv.sival_int = connection->getId();
     sigqueue(pid, SIGUSR1, sv);
 
     char *buf = server.date.serialize();

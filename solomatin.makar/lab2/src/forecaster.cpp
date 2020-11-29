@@ -1,4 +1,6 @@
 #include <string.h>
+#include <stdio.h>
+#include <time.h>
 #include <unistd.h>
 #include <signal.h>
 #include <iostream>
@@ -32,7 +34,7 @@ void Forecaster::handleSignal(int signum, siginfo_t* info, void* ptr) {
     kill(forecaster.hostPid, SIGUSR1);
 }
 
-Forecaster::Forecaster() : hostPid(-1), signalHandled(false) {
+Forecaster::Forecaster() {
     struct sigaction act;
     act.sa_sigaction = handleSignal;
     act.sa_flags = SA_SIGINFO;
@@ -42,12 +44,14 @@ Forecaster::Forecaster() : hostPid(-1), signalHandled(false) {
 bool Forecaster::handshake() {
     kill(hostPid, SIGUSR1);
 
-    double beginTime = clock();
+    clock_t beginTime = clock();
     while (!signalHandled) {
-        if ((clock() - beginTime) / CLOCKS_PER_SEC > timeout) {
+        double elapsed = (double)(clock() - beginTime) / CLOCKS_PER_SEC;
+        if (elapsed > timeout) {
             return false;
         }
         sleep(sleepTime);
+        std::cout << elapsed << std::endl;
     }
 
     return true;
@@ -57,4 +61,8 @@ int Forecaster::predict() {
     srand(date.Day + date.Month + date.Year + getpid());
 
     return -40 + rand() % 80;
+}
+
+Forecaster::~Forecaster() {
+
 }

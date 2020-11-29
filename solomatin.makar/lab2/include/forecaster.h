@@ -5,10 +5,10 @@
 
 class Forecaster {
     const double timeout = 10;
-    const double sleepTime = 0.5;
-    bool signalHandled;
+    const int sleepTime = 1;
+    bool signalHandled = false;
 
-    int hostPid;
+    int hostPid = -1;
     Date date;
 
     Forecaster();

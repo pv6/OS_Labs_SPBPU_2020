@@ -43,5 +43,7 @@ public:
 
     bool parseDate(int argc, char *argv[]);
     void start();
+
+    int nextClient() { static int i; return i++; }
     ~Server();
 };
