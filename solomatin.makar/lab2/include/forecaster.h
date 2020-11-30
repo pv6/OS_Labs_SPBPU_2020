@@ -2,14 +2,13 @@
 
 #include <signal.h>
 #include "date.h"
+#include "connection.h"
 
 class Forecaster {
-    bool signalHandled = false; 
     int prediction;   // current prediciton on date
     int hostPid = -1; // pid of host
     Date date;        // date to forecast
-
-    
+    Connection *connection = nullptr;
 
     Forecaster();
     Forecaster(const Forecaster&) = delete;
@@ -25,7 +24,7 @@ public:
     bool parseHostPid(int argc, char *argv[]);
 
     bool handshake();
-    void predict();
+    void readDate();
     void sendPrediction();
 
     ~Forecaster();

@@ -1,22 +1,24 @@
 #pragma once
 
 #include <string>
+#include <semaphore.h>
 
 class Connection {
-    int id = -1; // may be a port, pipe file id or mq id
+    int id, fd;
+    bool hostConnection;
+
+    Connection();
+    Connection &operator=(Connection &) = delete;
+    Connection(Connection &) = delete;
+public:
+    sem_t *clientSemaphore, *serverSemaphore;
     double lifetime = 0;
 
-    const int projId = 10;
-    const std::string filePrefix = "conn";
-public:
-    Connection(int id); // creates/opens connection with file descriptor
-    ~Connection(); // closes connection
+    ~Connection();
+
+    static Connection *connect(int id);
+    static Connection *create(int id);
 
     bool read(char *buffer, int len);
     bool write(char *buffer, int len);
-    int getId() { return id; }
-    void increaseLifetime(double delta) {
-        if (delta > 0) { this->lifetime += delta; }
-    }
-    double getLifetime() { return lifetime; }
 };

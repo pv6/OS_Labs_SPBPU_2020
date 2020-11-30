@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include "server.h"
 #include "connection.h"
+#include "utils.h"
 
 Server::Server() : date{0,0,0} {
     struct sigaction act;
@@ -17,20 +18,18 @@ Server::Server() : date{0,0,0} {
 void Server::handleSignal(int signum, siginfo_t* info, void* ptr) {
     Server &server = Server::instance();
     int pid = info->si_pid;
-    std::cout << "Received SIGUSR1 from " << pid << std::endl;
+    printOk("Received SIGUSR1 from " + std::to_string(pid));
 
     if (server.clients.find(pid) != server.clients.end()) {
-        std::cout << "Client with pid " << pid << " sent signal second time, closing connection" << std::endl;
-        server.removeConnection(pid);
+        printOk("Client with pid " + std::to_string(pid) + " sent signal but already exists");
         return;
     }
 
-    std::cout << "New client arrived with pid " << pid << std::endl;
+    printOk("New client arrived with pid " + std::to_string(pid));
 
     pthread_t tid;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-
     pthread_create(&tid, &attr, response, new int{pid});
 }
 
@@ -38,24 +37,44 @@ void *Server::response(void *pidPointer) {
     Server &server = Server::instance();
 
     int pid = *(int *)pidPointer;
+
+    printOk("Entered thread function for pid " + std::to_string(pid));
+
     delete (int *)pidPointer;
-    Connection *connection = new Connection(server.nextClient());
+    int id = server.nextClient();
+
+    try {
+    Connection *connection = Connection::create(id);
+
+    printOk("Connection for pid " + std::to_string(pid) + "created", id);
+
     server.addConnection(pid, connection);
 
     // notify client that channel created
-    union sigval sv;
-    sv.sival_int = connection->getId();
-    sigqueue(pid, SIGUSR1, sv);
+    sem_wait(connection->clientSemaphore);
+        sigval sv;
+        sv.sival_int = id;
+        sigqueue(pid, SIGUSR1, sv);
+        printOk("Sent signal back to " + std::to_string(pid) + " that channel created", id);
 
-    std::cout << "Sent signal back to " << pid << " that channel created" << std::endl;
+        char *buf = server.date.serialize();
+        connection->write(buf, sizeof(Date));
+        delete buf;
+    sem_post(connection->clientSemaphore);
 
-    char *buf = server.date.serialize();
-    connection->write(buf, sizeof(Date));
+    printOk("Waiting on server semaphore...", id);
+    sem_wait(connection->serverSemaphore);
+    int prediction;
+    connection->read((char *)&prediction, sizeof(prediction));
+    printOk("Client relesed semaphore, prediction read: " + std::to_string(prediction), id);
 
-    std::cout << "Writing date to channel" << std::endl;
-    delete buf;
+    server.removeConnection(pid);
+    printOk("Connection with id " + std::to_string(id) + " deleted", id);
 
     fflush(stdout);
+    } catch (const char *error) {
+        printErr("Error while processing client" + std::string(error), id);
+    }
     return nullptr;
 }
 
@@ -74,18 +93,11 @@ bool Server::parseDate(int argc, char *argv[]) {
 }
 
 void Server::start() {
-    std::cout << "Started server with date " << date.toString() << std::endl;
+    printOk("Started server with date " + date.toString());
     fflush(stdout);
 
     while(true) {
-        sleep(sleepTime);
-        for (auto const &pair : clients) {
-            if (pair.second->getLifetime() > timeout) {
-                std::cout << "Client with pid " << pair.first <<
-                " do not respond for " << timeout << " seconds, removing it" << std::endl;
-                removeConnection(pair.first);
-            }
-        }
+        sleep(1000);
     }
 }
 

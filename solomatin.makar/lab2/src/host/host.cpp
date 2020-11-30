@@ -11,7 +11,12 @@ int main(int argc, char *argv[]) {
     Server &server = Server::instance();
 
     if (!server.parseDate(argc, argv)) return 1;
-    server.start();
+
+    try {
+        server.start();
+    } catch (const char *error) {
+        perror(error);
+    }
 
     return 0;
 }

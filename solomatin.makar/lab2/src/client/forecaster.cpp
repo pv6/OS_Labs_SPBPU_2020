@@ -7,6 +7,7 @@
 #include "forecaster.h"
 #include "global_settings.h"
 #include "connection.h"
+#include "utils.h"
 
 bool Forecaster::parseHostPid(int argc, char *argv[]) {
     static const char *help = "Usage: ./client [--host-pid PID]\n";
@@ -20,19 +21,22 @@ bool Forecaster::parseHostPid(int argc, char *argv[]) {
 }
 
 void Forecaster::handleSignal(int signum, siginfo_t* info, void* ptr) {
+    printOk("Received signal from " + std::to_string(info->si_pid));
     Forecaster &forecaster = Forecaster::instance();
-    forecaster.signalHandled = true;
+    if (forecaster.connection != nullptr) return;
 
     int id = info->si_value.sival_int;
+    printOk("Host returned id: " + std::to_string(id));
 
-    Connection connection(id);
+    Connection *connection = Connection::connect(id);
+    printOk("Connection object created", id);
+
     char *buffer = new char[sizeof(Date)];
-    connection.read(buffer, sizeof(Date));
+    printOk("Reading date from server...", id);
+    connection->read(buffer, sizeof(Date));
     forecaster.date = Date::deserialize(buffer);
+    printOk("Date read: " + std::to_string(forecaster.date.Year) + "-" + std::to_string(forecaster.date.Month) + "-" + std::to_string(forecaster.date.Day), id);
     delete buffer;
-
-    // send signal that result obtained
-    kill(forecaster.hostPid, SIGUSR1);
 }
 
 Forecaster::Forecaster() : date{0,0,0} {
@@ -46,7 +50,7 @@ bool Forecaster::handshake() {
     kill(hostPid, SIGUSR1);
 
     clock_t beginTime = clock();
-    while (!signalHandled) {
+    while (connection == nullptr) {
         double elapsed = (clock() - beginTime) / CLOCKS_PER_SEC;
         if (elapsed > TIMEOUT) {
             return false;
@@ -56,12 +60,22 @@ bool Forecaster::handshake() {
     return true;
 }
 
-void Forecaster::predict() {
+void Forecaster::sendPrediction() {
     srand(date.Day + date.Month + date.Year + getpid());
-
     prediction = -40 + rand() % 80;
+    connection->write((char *)&prediction, sizeof(prediction));
+
+    sem_post(connection->serverSemaphore);
+    printOk("Relased server semaphore!");
 }
 
 Forecaster::~Forecaster() {
+    if (connection != nullptr) {
+        delete connection;
+    }
+}
 
+void Forecaster::readDate() {
+    if (connection == nullptr) return;
+    connection->read((char *)&date, sizeof(date));
 }
