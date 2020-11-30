@@ -6,7 +6,6 @@
 #include <cstring>
 #include <unistd.h>
 #include <syslog.h>
-#include <vector>
 #include <sstream>
 
 
@@ -17,13 +16,12 @@ server* server::get_instance() {
 
 void server::set_num_of_clients(int num) {
     num_of_clients = num;
-    conn_w_clients.clear();
-    conn_w_clients = std::vector<client_host_connection*>();
     client_threads.clear();
     client_threads = std::vector<client_handler*>();
 }
 
 server::server() {
+    signalled_to = false;
     struct sigaction act{};
     memset(&act, 0, sizeof(act));
     act.sa_sigaction = signal_handler;
@@ -56,18 +54,15 @@ void* server::execute(void *arg) {
 
 void server::start() {
     syslog(LOG_INFO, "Creation of all clients started in server");
-    auto *conn = new client_host_connection();
     for (int i = 0; i < num_of_clients; i++) {
         auto *handler = new client_handler(i);
-        conn->open(handler->get_id());
-        handler->set_conn_w_server(conn);
         if(!handler->open_connection_w_weather()) {
+            std::cout << "Error in connection w/ weather" << std::endl;
             syslog(LOG_ERR, "Error in connection establishment: %s", strerror(errno));
             return;
         }
         create_client(handler);
         client_threads.push_back(handler);
-        conn_w_clients.push_back(conn);
 
         pthread_t tid;
         pthread_attr_t attr;
@@ -93,11 +88,43 @@ void server::signal_handler(int signum, siginfo_t *info, void *ptr) {
 
 void server::terminate(int signum) {
     syslog(LOG_INFO, "Starting server's disconnection");
-    for (int i = 0; i < num_of_clients; i++) {
-        conn_w_clients[i]->disconnect();
-    }
     closelog();
     exit(signum);
+}
+
+void server::run() {
+    std::string new_date;
+    std::vector<int> date_parts;
+    bool flag_start = true;
+    while (true) {
+        new_date = "";
+        flag_start = true;
+        date_parts.clear();
+        while (!form_date(new_date, date_parts)) {
+            if (std::cin.fail()) {
+                std::cin.clear();
+                new_date = "";
+            } else {
+                if (flag_start)
+                    flag_start = false;
+                else
+                    std::cout << "Incrorrect format: try again!" << std::endl;
+                std::cout << "Enter the date in format: DD.MM.YYYY OR enter \"q\" for exit."<< std::endl;
+            }
+            std::cin >> new_date;
+
+            if (new_date == "q" || new_date == "Q") {
+                syslog(LOG_INFO, "Terminating server...");
+                terminate(EXIT_SUCCESS);
+            }
+        }
+        send_date_msg(date_parts);
+    }
+}
+
+void server::send_date_msg(std::vector<int> date_parts) {
+    this->signalled_to = true;
+    this->date_elems = date_parts;
 }
 
 bool server::form_date(std::string date, std::vector<int> &date_elems) {
@@ -133,55 +160,14 @@ bool server::form_date(std::string date, std::vector<int> &date_elems) {
     return true;
 }
 
-bool server::msg_from_date(std::string date, message &msg) {
-    std::vector<int> date_elems;
-    if (!form_date(date, date_elems)) {
-        syslog(LOG_ERR, "Data forming failed");
-        return false;
-    }
-    msg.set_day(date_elems.at(0));
-    msg.set_month(date_elems.at(1));
-    msg.set_year(date_elems.at(2));
-    return true;
+std::vector<int> server::get_date() {
+    return this->date_elems;
 }
 
-void server::run() {
-    std::string new_date;
-    message msg;
-    bool flag_start = true;
-    std::vector<int> date_elems;
-    while (true) {
-        new_date = "";
-        flag_start = true;
-        date_elems.clear();
-        while (!form_date(new_date, date_elems)) {
-            if (std::cin.fail()) {
-                std::cin.clear();
-                new_date = "";
-            } else {
-                if (flag_start)
-                    flag_start = false;
-                else
-                    std::cout << "Incrorrect format: try again!" << std::endl;
-                std::cout << "Enter the date in format: DD.MM.YYYY OR enter \"q\" for exit."<< std::endl;
-            }
-            std::cin >> new_date;
-            if (new_date == "q" || new_date == "Q") {
-                syslog(LOG_INFO, "Terminating server...");
-                terminate(EXIT_SUCCESS);
-            }
-        }
-
-        msg_from_date(new_date, msg);
-        send_date_msg(msg);
-    }
+bool server::is_signalled() {
+    return signalled_to;
 }
 
-void server::send_date_msg(message msg) {
-    for (int i = 0; i < num_of_clients; i++) {
-        if (!conn_w_clients[i]->is_closed()) {
-            conn_w_clients[i]->write(&msg, sizeof(msg));
-            conn_w_clients[i]->signal_to();
-        }
-    }
+void server::signal_got() {
+    this->signalled_to = false;
 }

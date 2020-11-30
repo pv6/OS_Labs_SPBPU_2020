@@ -8,7 +8,6 @@
 #include <syslog.h>
 #include <cstring>
 
-
 static std::string mq_name = "/mq";
 bool conn::open(size_t id, bool create) {
     file_descr_ = (int*)malloc(sizeof(int));
@@ -25,7 +24,7 @@ bool conn::open(size_t id, bool create) {
         syslog(LOG_ERR, "Cannot establish connection with id = %zu, error = %s", id, strerror(errno));
         return false;
     }
-    syslog(LOG_INFO, "Connection with id %zu established successfully", id);
+    syslog(LOG_INFO, "Connection with id %lu established successfully", id);
     return true;
 }
 
@@ -49,7 +48,7 @@ bool conn::read(void *buf, size_t count) {
 
 bool conn::write(void *buf, size_t count) {
     if (mq_send(*file_descr_, (char *) buf, count, 0) == -1) {
-        syslog(LOG_ERR, "Problems with reading: %s", strerror(errno));
+        syslog(LOG_ERR, "Problems with writing: %s", strerror(errno));
         return false;
     }
     return true;

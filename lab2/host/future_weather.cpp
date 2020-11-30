@@ -9,15 +9,15 @@
 #include <unistd.h>
 #include <iostream>
 
-future_weather* future_weather::get_instance(int host_pid) {
-    static future_weather self(host_pid);
+future_weather* future_weather::get_instance(int id) {
+    static future_weather self(id);
     return &self;
 }
 
-future_weather::future_weather(int host_pid_) {
-    syslog(LOG_NOTICE, "Host handler pid is: %d", host_pid);
-    host_pid = host_pid_;
-    srand(time(NULL) + host_pid_);
+future_weather::future_weather(int id) {
+    syslog(LOG_NOTICE, "Client id is: %d", id);
+    client_id = id;
+    srand(time(NULL) + id);
     rand_offset = rand();
     signal(SIGTERM, signal_handler);
 }
@@ -28,9 +28,9 @@ future_weather& future_weather::operator=(future_weather& other) {
 }
 
 bool future_weather::open_connection() {
-    if (connection.open(host_pid, false)) {
-        sem_client_name = "client_" + std::to_string(host_pid);
-        sem_host_name = "host_" + std::to_string(host_pid);
+    if (connection.open(client_id, false)) {
+        sem_client_name = "client_" + std::to_string(client_id);
+        sem_host_name = "host_" + std::to_string(client_id);
 
         semaphore_host = sem_open(sem_host_name.c_str(), 0);
         if (semaphore_host == SEM_FAILED) {

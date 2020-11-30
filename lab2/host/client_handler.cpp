@@ -3,10 +3,9 @@
 //
 
 #include "client_handler.h"
-#include "../conn/conn.h"
+#include "server.h"
 #include <fcntl.h>
 #include <cstring>
-#include <unistd.h>
 #include <csignal>
 #include <semaphore.h>
 #include <syslog.h>
@@ -28,11 +27,6 @@ void client_handler::set_client(int pid) {
 
 conn client_handler::get_conn() {
     return conn_w_weather;
-}
-
-void client_handler::set_conn_w_server(client_host_connection* connection) {
-    conn_w_server = connection;
-    conn_w_server->open(client_id);
 }
 
 bool client_handler::open_connection_w_weather() {
@@ -104,12 +98,14 @@ void client_handler::terminate(int signum) {
 }
 
 bool client_handler::get_date_msg(message &msg) {
-    message buf;
-    if (conn_w_server->read(&buf, sizeof(buf))) {
-        msg = buf;
-        return true;
+    server* cur_server = server::get_instance();
+    if (!cur_server) {
+        syslog(LOG_ERR, "Impossible to reach server");
+        return false;
     }
-    return false;
+    std::vector<int> date_elems = cur_server->get_date();
+    msg_from_date(date_elems, msg);
+    return true;
 }
 
 void client_handler::start() {
@@ -118,15 +114,21 @@ void client_handler::start() {
 
     message msg;
     message buf;
+    server* cur_server = server::get_instance();
+    if (!cur_server) {
+        syslog(LOG_ERR, "Impossible to reach server");
+        return;
+    }
     while (true) {
-        if (conn_w_server->has_signalled_to()) {
+        if (cur_server->is_signalled()) {
             get_date_msg(msg);
+            cur_server->signal_got();
             std::cout << "Message got! ";
             if (conn_w_weather.write(&msg, sizeof(msg))) {
                 std::cout << "Wait for response..." << std::endl;
                 sem_post(semaphore_client);
                 clock_gettime(CLOCK_REALTIME, &ts);
-                ts.tv_sec += timeout;
+                ts.tv_sec += timeout * 1000;
                 res = sem_timedwait(semaphore_host, &ts);
                 if (res == -1) {
                     kill_client();
@@ -142,4 +144,12 @@ void client_handler::start() {
             }
         }
     }
+}
+
+
+
+void client_handler::msg_from_date(std::vector<int> date_elems, message &msg) {
+    msg.set_day(date_elems.at(0));
+    msg.set_month(date_elems.at(1));
+    msg.set_year(date_elems.at(2));
 }

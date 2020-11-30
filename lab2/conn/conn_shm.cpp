@@ -10,7 +10,6 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <iostream>
 
 static std::string shm_name = "/shm";
 bool conn::open(size_t id, bool create) {

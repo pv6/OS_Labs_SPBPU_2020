@@ -11,7 +11,7 @@
 
 class future_weather {
 public:
-    static future_weather *get_instance(int host_pid);
+    static future_weather *get_instance(int id);
     void start();
     bool open_connection();
     void set_conn(conn connection);
@@ -22,10 +22,10 @@ private:
     std::string sem_client_name;
     std::string sem_host_name;
 
-    int host_pid;
+    int client_id;
     int rand_offset;
 
-    future_weather(int host_pid);
+    future_weather(int id);
     future_weather(future_weather &weather);
     future_weather &operator=(future_weather &weather);
     void terminate(int signum);
