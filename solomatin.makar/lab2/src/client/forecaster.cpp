@@ -7,7 +7,7 @@
 #include "forecaster.h"
 #include "global_settings.h"
 #include "connection.h"
-#include "utils.h"
+#include "print_utils.h"
 
 bool Forecaster::parseHostPid(int argc, char *argv[]) {
     static const char *help = "Usage: ./client [--host-pid PID]\n";
@@ -31,12 +31,11 @@ void Forecaster::handleSignal(int signum, siginfo_t* info, void* ptr) {
     Connection *connection = Connection::connect(id);
     printOk("Connection object created", id);
 
-    char *buffer = new char[sizeof(Date)];
     printOk("Reading date from server...", id);
-    connection->read(buffer, sizeof(Date));
-    forecaster.date = Date::deserialize(buffer);
-    printOk("Date read: " + std::to_string(forecaster.date.Year) + "-" + std::to_string(forecaster.date.Month) + "-" + std::to_string(forecaster.date.Day), id);
-    delete buffer;
+    forecaster.readDate();
+    printOk("Date read: " + forecaster.date.toString(), id);
+
+    forecaster.sendPrediction();
 }
 
 Forecaster::Forecaster() : date{0,0,0} {
@@ -61,10 +60,14 @@ bool Forecaster::handshake() {
 }
 
 void Forecaster::sendPrediction() {
+    printOk("Calculating prediction...");
     srand(date.Day + date.Month + date.Year + getpid());
     prediction = -40 + rand() % 80;
+    printOk("Writing prediction");
     connection->write((char *)&prediction, sizeof(prediction));
+    printOk("Prediction calculated");
 
+    printOk("Trying to release server semaphore");
     sem_post(connection->serverSemaphore);
     printOk("Relased server semaphore!");
 }

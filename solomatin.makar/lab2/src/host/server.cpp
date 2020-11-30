@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include "server.h"
 #include "connection.h"
-#include "utils.h"
+#include "print_utils.h"
 
 Server::Server() : date{0,0,0} {
     struct sigaction act;
@@ -46,7 +46,7 @@ void *Server::response(void *pidPointer) {
     try {
     Connection *connection = Connection::create(id);
 
-    printOk("Connection for pid " + std::to_string(pid) + "created", id);
+    printOk("Connection for pid " + std::to_string(pid) + " created", id);
 
     server.addConnection(pid, connection);
 
