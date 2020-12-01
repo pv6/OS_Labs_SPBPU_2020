@@ -28,7 +28,7 @@ void Forecaster::handleSignal(int signum, siginfo_t* info, void* ptr) {
     int id = info->si_value.sival_int;
     printOk("Host returned id: " + std::to_string(id));
 
-    Connection *connection = Connection::connect(id);
+    forecaster.connection = Connection::connect(id);
     printOk("Connection object created", id);
 
     printOk("Reading date from server...", id);
@@ -61,7 +61,7 @@ bool Forecaster::handshake() {
 
 void Forecaster::sendPrediction() {
     printOk("Calculating prediction...");
-    srand(date.Day + date.Month + date.Year + getpid());
+    //srand(date.Day + date.Month + date.Year + getpid());
     prediction = -40 + rand() % 80;
     printOk("Writing prediction");
     connection->write((char *)&prediction, sizeof(prediction));
@@ -79,6 +79,8 @@ Forecaster::~Forecaster() {
 }
 
 void Forecaster::readDate() {
-    if (connection == nullptr) return;
+    if (connection == nullptr) {
+        return;
+    }
     connection->read((char *)&date, sizeof(date));
 }

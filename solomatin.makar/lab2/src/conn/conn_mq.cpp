@@ -110,21 +110,25 @@ bool Connection::read(char *buffer, int len) {
 }
 
 bool Connection::write(char *buffer, int len) {
-    Message message;
-    message.type = 1;
-    memcpy(message.data, buffer, len);
+    // Message message;
+    // message.type = 1;
+    // memcpy(message.data, buffer, len);
+    char *realBuffer = new char[len + sizeof(long)];
+    *(long *)realBuffer = 1;
+    memcpy(realBuffer + sizeof(long), buffer, len);
 
     sem_t *semaphore = hostConnection ? serverSemaphore : clientSemaphore;
     if (sem_wait(semaphore) < 0) {
         throw "Could not lock semaphore";
     }
 
-    if (msgsnd(fd, &message, sizeof(Message), 0) < 0) {
+    if (msgsnd(fd, realBuffer, sizeof(long) + len, 0) < 0) {
         if (sem_post(semaphore) < 0) {
             throw "Could not release semaphore";
         }
         return false;
     }
+    delete[] realBuffer;
 
     if (sem_post(semaphore) < 0) {
         throw "Could not release semaphore";

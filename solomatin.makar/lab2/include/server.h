@@ -10,14 +10,8 @@
 class Server {
     Date date;
 
-    const double sleepTime = 0.5;
-    const double timeout = 10;
-
     pthread_mutex_t clientsMutex;
     std::map<int, Connection *> clients;
-
-    pthread_mutex_t pidMutex;
-    int pid = -1;
 
     Server();
     Server(const Server &) = delete;

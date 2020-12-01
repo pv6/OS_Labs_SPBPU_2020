@@ -57,9 +57,7 @@ void *Server::response(void *pidPointer) {
         sigqueue(pid, SIGUSR1, sv);
         printOk("Sent signal back to " + std::to_string(pid) + " that channel created", id);
 
-        char *buf = server.date.serialize();
-        connection->write(buf, sizeof(Date));
-        delete buf;
+        connection->write((char *)&server.date, sizeof(Date));
     sem_post(connection->clientSemaphore);
 
     printOk("Waiting on server semaphore...", id);
