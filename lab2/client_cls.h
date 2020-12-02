@@ -31,6 +31,8 @@ private:
     static void handleSignal(int signum);
     sem_t *host_semaphore;
     sem_t *client_semaphore;
+    Client(const Client&);
+    Client& operator=(Client&);
 };
 
 #endif // CLIENT_CLS_H_INCLUDED

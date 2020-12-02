@@ -34,6 +34,8 @@ private:
     sem_t *host_semaphore{};
     sem_t *client_semaphore{};
     Host();
+    Host(const Host&);
+    Host& operator=(Host&);
 };
 
 #endif // HOST_CLS_H_INCLUDED
