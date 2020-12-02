@@ -8,24 +8,26 @@
 
 class Goat {
 public:
-    static Goat* GetInstance(int id);
+    static Goat* GetInstance(int pid);
     void Start();
-    Goat(int id);
-    void Set(conn* connection, sem_t* semHost, sem_t* semClient);
+    void Set(conn* connection, sem_t* semHost, sem_t* semClient, int id);
     ~Goat();
     Status GetStatus();
     conn* GetConnection();
     sem_t* GetSemHost();
     sem_t* GetSemClient();
     pid_t GetPid();
-    void SetPid(pid_t p);
+    //void SetPid(pid_t p);
     void Terminate();
 private:
-    pid_t pid;
+    pid_t myPid;
     Status status;
     conn* connection;
     sem_t* semClient;
     sem_t* semHost;
+    Goat(int pid);
+    Goat(Goat& other);
+    Goat& operator=(Goat& other);
     int myId;
     bool st = true;
     static int GenerateRandomNumber(int max);

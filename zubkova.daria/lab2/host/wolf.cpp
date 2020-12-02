@@ -11,8 +11,8 @@
 
 #define TIMEOUT 5
 
-std::list<Goat*> Wolf::clients = std::list<Goat*>();
-std::map<Goat*, Message> Wolf::clientsMessages = std::map<Goat*, Message>();
+std::list<str*> Wolf::structClients = std::list<str*>();
+std::map<int, Message> Wolf::clientsMessages = std::map<int, Message>();
 int Wolf::numWolf = 0;
 int Wolf::numGoats = 0;
 
@@ -24,6 +24,12 @@ Wolf::Wolf(){
     sigaction(SIGTERM, &act, nullptr);
 }
 
+Wolf::Wolf(Wolf& other){}
+
+Wolf& Wolf::operator=(Wolf& other) {
+    return other;
+}
+
 Wolf::~Wolf() = default;
 
 Wolf* Wolf::GetInstance() {
@@ -32,28 +38,45 @@ Wolf* Wolf::GetInstance() {
 }
 
 void Wolf::Terminate(int signum){
-    for (auto client : clients){
-        kill(client->GetPid(), SIGTERM);
+    for (auto client : structClients){
+        kill(client->pid, SIGTERM);
+        sem_post(client->semClient);
+        if (client->con != nullptr) {
+            if (!client->con->Close()) {
+                syslog(LOG_ERR, "ERROR: %s", strerror(errno));
+            }
+            client->con = nullptr;
+        }
+        if (client->semClient != nullptr && client->semHost != nullptr) {
+            std::string semName = "sem_client_" + std::to_string(client->id);
+            std::string semName2 = "sem_host_" + std::to_string(client->id);
+            if (sem_unlink(semName.c_str()) == -1 || sem_unlink(semName2.c_str()) == -1) {
+                syslog(LOG_ERR, "ERROR: %s", strerror(errno));
+            }
+            client->semClient = nullptr;
+            client->semHost = nullptr;
+        }
     }
-    while (!clients.empty()) {
-        delete clients.front();
-        clients.pop_front();
+    while (!structClients.empty()) {
+        delete structClients.front();
+        structClients.pop_front();
     }
     clientsMessages.clear();
 }
 
 void* Wolf::ReadGoats(void* param) {
     syslog(LOG_NOTICE, "Run read wolf");
-    Goat* client = (Goat*) param;
+    //Goat* client = (Goat*) param;
+    str* client = (str*)param;
     Message buf(Owner::WOLF);
-    if (client->GetConnection()->Read(&buf, sizeof(buf))) {
+    if (client->con->Read(&buf, sizeof(buf))) {
         if (buf.owner != Owner::WOLF) {
             //std::cout << "Goat Num " << buf.num << std::endl;
-            clientsMessages[client] = buf;
+            clientsMessages[client->id] = buf;
             return nullptr;
         } else {
             syslog(LOG_NOTICE, "Wolf write again");
-            if (!client->GetConnection()->Write(&buf, sizeof(buf))){
+            if (!client->con->Write(&buf, sizeof(buf))){
                 syslog(LOG_ERR, "ERROR: Can't write in wolf");
                 return nullptr;
             }
@@ -67,30 +90,30 @@ void* Wolf::ReadGoats(void* param) {
 void* Wolf::WriteGoats(void* param) {
     syslog(LOG_NOTICE, "Run write wolf");
     struct timespec ts;
-    Goat* client = (Goat*) param;
-    sem_t* semHost = client->GetSemHost();
-    sem_t* semClient = client->GetSemClient();
-    int clientNumber = clientsMessages[client].num;
-    Status st = clientsMessages[client].st;
+    str* client = (str*) param;
+    //sem_t* semHost = client->GetSemHost();
+    //sem_t* semClient = client->GetSemClient();
+    int clientNumber = clientsMessages[client->id].num;
+    Status st = clientsMessages[client->id].st;
     if (st == Status::ALIVE && abs(numWolf - clientNumber) <= 70 / numGoats) {
         st = Status::ALIVE;
-        clientsMessages[client].st = Status::ALIVE;
+        clientsMessages[client->id].st = Status::ALIVE;
     } else if (st == Status::DEAD && abs(numWolf - clientNumber) <= 20 / numGoats) {
         st = Status::ALIVE;
-        clientsMessages[client].st = Status::ALIVE;
+        clientsMessages[client->id].st = Status::ALIVE;
     } else {
         st = Status::DEAD;
-        clientsMessages[client].st = Status::DEAD;
+        clientsMessages[client->id].st = Status::DEAD;
     }
     Message msg(Owner::WOLF, st, numWolf);
-    if (!client->GetConnection()->Write(&msg, sizeof(msg))){
+    if (!client->con->Write(&msg, sizeof(msg))){
         syslog(LOG_ERR, "ERROR: Can't write in wolf");
         return nullptr;
     }
-    sem_post(semClient);
+    sem_post(client->semClient);
     clock_gettime(CLOCK_REALTIME, &ts);
     ts.tv_sec += TIMEOUT;
-    if (sem_timedwait(semHost, &ts) == -1) {
+    if (sem_timedwait(client->semHost, &ts) == -1) {
         syslog(LOG_NOTICE, "ERROR: Wait time finish");
         KillClient(client);
         return nullptr;
@@ -98,15 +121,15 @@ void* Wolf::WriteGoats(void* param) {
     return nullptr;
 }
 
-void Wolf::KillClient(Goat* client){
-    kill(client->GetPid(), SIGTERM);
-    clients.remove(client);
+void Wolf::KillClient(str* client){
+    kill(client->pid, SIGTERM);
+    structClients.remove(client);
     numGoats--;
 }
 
 void Wolf::Threads(void* (*function) (void*)){
     std::list <pthread_t> tids;
-    for (auto client : clients) {
+    for (auto client : structClients) {
         pthread_t tid;
         pthread_attr_t attr;
         pthread_attr_init(&attr);
@@ -119,11 +142,12 @@ void Wolf::Threads(void* (*function) (void*)){
 }
 
 void Wolf::Start() {
-    CreateGoats();
-    Process();
+    if (CreateGoats()) {
+        Process();
+    }
 }
 
-void Wolf::CreateGoats() {
+bool Wolf::CreateGoats() {
     std::cout << "Enter number of goats: ";
     struct timespec ts;
     while (true) {
@@ -157,7 +181,7 @@ void Wolf::CreateGoats() {
 
         sem_t* semClient = sem_open(sem_client_name.c_str(), O_CREAT, 0666, 0);
         if (semClient == SEM_FAILED) {
-            std::cout << "ERROR: can`t open client semaphore = " << strerror(errno) << std::endl;
+            //std::cout << "ERROR: can`t open client semaphore = " << strerror(errno) << std::endl;
             syslog(LOG_ERR, "ERROR: can`t open client semaphore = %s", strerror(errno));
             sem_unlink(sem_host_name.c_str());
             continue;
@@ -169,7 +193,7 @@ void Wolf::CreateGoats() {
 
         Message msg(Owner::WOLF);
         if (!curConnection->Write(&msg, sizeof(msg))){
-            std::cout << "ERROR: Can`t write goat(" << i << ") = " << strerror(errno)<< std::endl;
+            //std::cout << "ERROR: Can`t write goat(" << i << ") = " << strerror(errno)<< std::endl;
             syslog(LOG_ERR, "ERROR: Can`t write goat( << %i << ) = %s", i, strerror(errno));
             if (semClient != nullptr && semHost != nullptr) {
                 std::string semName = "sem_client_" + std::to_string(i);
@@ -180,25 +204,34 @@ void Wolf::CreateGoats() {
             }
             continue;
         }
-        Goat* client = new Goat(i);
-        client->Set(curConnection, semHost, semClient);
+
+        str* s = new str;
+        s->id = i;
+        s->con = curConnection;
+        s->semHost = semHost;
+        s->semClient = semClient;
+
         int pid = fork();
         //std::cout << " PID: " << pid << std::endl;
-        client->SetPid(pid);
+        s->pid = pid;
+
         if (pid == 0) {
+            Goat* client = Goat::GetInstance(pid);
+            client->Set(curConnection, semHost, semClient, i);
             client->Start();
-            return;
+            return false;
         }
         sem_post(semClient);
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += TIMEOUT;
         if (sem_timedwait(semHost, &ts) == -1) {
             syslog(LOG_NOTICE, "ERROR: Wait time finish");
-            KillClient(client);
+            KillClient(s);
             continue;
         }
-        clients.push_back(client);
+        structClients.push_back(s);
     }
+    return true;
 }
 
 
@@ -207,13 +240,14 @@ void Wolf::Process() {
     syslog(LOG_NOTICE, "Game:");
     int dead = 0;
     int numDead = 0;
-    while (true) {
+    while (st) {
+
        Threads(Wolf::ReadGoats);
 
-        for (auto client : clients) {
-            std::string goatSt = clientsMessages[client].st == Status::ALIVE ? "ALIVE" : "DEAD";
-            std::cout << "Goat's number: " << clientsMessages[client].num << " & status: " << goatSt << std::endl;
-            syslog(LOG_NOTICE, "Goat's number: %i & status: %s", clientsMessages[client].num, goatSt.c_str());
+        for (auto client : structClients) {
+            std::string goatSt = clientsMessages[client->id].st == Status::ALIVE ? "ALIVE" : "DEAD";
+            std::cout << "Goat's number: " << clientsMessages[client->id].num << " & status: " << goatSt << std::endl;
+            syslog(LOG_NOTICE, "Goat's number: %i & status: %s", clientsMessages[client->id].num, goatSt.c_str());
         }
 
         std::random_device rd;
@@ -226,8 +260,8 @@ void Wolf::Process() {
         Threads(Wolf::WriteGoats);
 
         numDead = 0;
-        for (auto client : clients) {
-            if (clientsMessages[client].st == Status::DEAD)
+        for (auto client : structClients) {
+            if (clientsMessages[client->id].st == Status::DEAD)
                 numDead++;
         }
         std::cout << "Number of dead: " << numDead << std::endl;
@@ -239,10 +273,11 @@ void Wolf::Process() {
         if (dead == 2) {
             std::cout << "Wolf is winner" << std::endl;
             syslog(LOG_NOTICE, "Wolf is winner");
-            Terminate(SIGTERM);
-            break;
+            st = false;
+            continue;
         }
     }
+    Terminate(SIGTERM);
 }
 
 void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr){
@@ -251,6 +286,7 @@ void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr){
     {
         case SIGTERM:
         {
+            instance->st = false;
             instance->Terminate(signum);
             break;
         }

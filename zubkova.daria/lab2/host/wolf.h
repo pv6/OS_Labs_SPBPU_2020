@@ -7,6 +7,14 @@
 #include <map>
 #include <list>
 
+typedef struct str{
+    int pid;
+    conn* con;
+    sem_t* semHost;
+    sem_t* semClient;
+    int id;
+}str;
+
 class Wolf {
 public:
     static Wolf* GetInstance();
@@ -15,16 +23,19 @@ public:
 private:
     static void* ReadGoats(void* param);
     static void* WriteGoats(void* param);
-    static void KillClient(Goat* client);
+    static void KillClient(str* client);
     static void Terminate(int signum);
     static void SignalHandler(int signum, siginfo_t* info, void* ptr);
-    static std::list<Goat*> clients;
-    static std::map<Goat*, Message> clientsMessages;
+    static std::list<str*> structClients;
+    static std::map<int, Message> clientsMessages;
     static int numGoats;
     static int numWolf;
     Wolf();
-    static void CreateGoats();
+    Wolf(Wolf& other);
+    Wolf& operator=(Wolf& other);
+    static bool CreateGoats();
     void Process();
+    int st = true;
     static void Threads(void* (*function) (void*));
 };
 

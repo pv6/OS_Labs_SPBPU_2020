@@ -5,35 +5,31 @@
 #include "goat.h"
 #include <random>
 
-Goat* Goat::GetInstance(int id) {
-    static Goat instance(id);
+Goat* Goat::GetInstance(int pid) {
+    static Goat instance(pid);
     return &instance;
 }
 
-Goat::Goat(int id) {
-    myId = id;
+Goat::Goat(int pid) {
+    myPid = pid;
     status = Status::ALIVE;
     signal(SIGTERM, SignalHandler);
 }
 
-void Goat::Set(conn* connection, sem_t* semHost, sem_t* semClient){
+Goat::Goat(Goat& other){}
+
+Goat& Goat::operator=(Goat& other) {
+    return other;
+}
+
+void Goat::Set(conn* connection, sem_t* semHost, sem_t* semClient, int id){
     this->connection = connection;
     this->semHost = semHost;
     this->semClient = semClient;
+    this->myId = id;
 }
 
-Goat::~Goat(){
-    if (!connection->Close()) {
-        syslog(LOG_ERR, "ERROR: %s", strerror(errno));
-    }
-    if (semClient != nullptr && semHost != nullptr) {
-        std::string semName = "sem_client_" + std::to_string(myId);
-        std::string semName2 = "sem_host_" + std::to_string(myId);
-        if (sem_unlink(semName.c_str()) == -1 || sem_unlink(semName2.c_str()) == -1) {
-            syslog(LOG_ERR, "ERROR: %s", strerror(errno));
-        }
-    }
-}
+Goat::~Goat(){}
 
 Status Goat::GetStatus(){
     return status;
@@ -52,16 +48,15 @@ sem_t* Goat::GetSemClient(){
 }
 
 pid_t Goat::GetPid(){
-    return pid;
-}
-
-void Goat::SetPid(pid_t p) {
-    this->pid = p;
+    return myPid;
 }
 
 void Goat::Start() {
     while (st) {
         sem_wait(semClient);
+        if (!st){
+            break;
+        }
         Message* buf = new Message();
         if (!connection->Read(buf, sizeof(*buf))){
             //std::cout << "Can't read in goat" << strerror(errno) << std::endl;
@@ -80,12 +75,14 @@ void Goat::Start() {
         }
         sem_post(semHost);
     }
-    Terminate();
 }
 
 void Goat::Terminate(){
-    if (!connection->Close()) {
-        syslog(LOG_ERR, "ERROR: %s", strerror(errno));
+    if (connection != nullptr) {
+        if (!connection->Close()) {
+            syslog(LOG_ERR, "ERROR: %s", strerror(errno));
+        }
+        connection = nullptr;
     }
     if (semClient != nullptr && semHost != nullptr) {
         std::string semName = "sem_client_" + std::to_string(myId);
@@ -103,7 +100,7 @@ void Goat::SignalHandler(int signum) {
     switch (signum) {
         case SIGTERM: {
             instance->st = false;
-            instance->Terminate();
+            break;
         }
     }
 }
