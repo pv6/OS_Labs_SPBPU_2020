@@ -14,11 +14,11 @@ public:
     bool CloseConnect();
     bool Read(void *buf, size_t size);
     bool Write(void *buf, size_t size);
-    int get_client_id();
     bool IsClosed() const { return _isClosed; };
     void SignTo();
     bool HasSign() const;
-
+    void SetReady(bool val);
+    bool IsClientReady();
     void SetStat(bool stat);
     bool GetSat();
 private:
@@ -28,7 +28,7 @@ private:
     bool _isAlive = true;
     int _fd[2];
 
-
+    bool _isClientReady = false;
 
 };
 #endif //LASTTRY_HOST_CONN_H

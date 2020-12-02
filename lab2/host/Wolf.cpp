@@ -126,28 +126,44 @@ void Wolf::SendAliveStatus(int msg) {
     }
 }
 
+
 void Wolf::WolfWork(int msg) {
     int alive = 1;
     int dead = 0;
     int valOfDead = 0;
-    for (int i = 0; i < _numOfClients; i++) {
-        if(_hostConnections[i]->GetSat()){
-            int num;
-            _hostConnections[i]->Read(&num, sizeof(int));
-            if(std::abs(num - msg) < _valAlive){
-                _hostConnections[i]->Write(&alive, sizeof(int));
-            }else{
-                _hostConnections[i]->Write(&dead, sizeof(int));
-                valOfDead++;
+    int i = 0;
+    int numOfAnswers = 0;
+    std::vector<int> answers(_numOfClients);
+    while(numOfAnswers < _numOfClients) {
+        if(answers[i] == 0) {
+            if(_hostConnections[i]->IsClientReady()) {
+                if (_hostConnections[i]->GetSat()) {
+                    int num;
+                    _hostConnections[i]->Read(&num, sizeof(int));
+                    if (std::abs(num - msg) < _valAlive) {
+                        _hostConnections[i]->Write(&alive, sizeof(int));
+                    } else {
+                        _hostConnections[i]->Write(&dead, sizeof(int));
+                        valOfDead++;
+                    }
+                } else {
+                    int num;
+                    _hostConnections[i]->Read(&num, sizeof(int));
+                    if (std::abs(num - msg) < _valDeath) {
+                        _hostConnections[i]->Write(&alive, sizeof(int));
+                    } else {
+                        _hostConnections[i]->Write(&dead, sizeof(int));
+                        valOfDead++;
+                    }
+                }
+                numOfAnswers++;
+                answers[i]++;
             }
-        }else{
-            int num;
-            _hostConnections[i]->Read(&num, sizeof(int));
-            if(std::abs(num - msg) < _valDeath){
-                _hostConnections[i]->Write(&alive, sizeof(int));
-            }else{
-                _hostConnections[i]->Write(&dead, sizeof(int));
-                valOfDead++;
+        }
+        i++;
+        if(i ==_numOfClients){
+            if(numOfAnswers != _numOfClients){
+                i = 0;
             }
         }
     }
@@ -157,3 +173,5 @@ void Wolf::WolfWork(int msg) {
         _deadTurns = 0;
     }
 }
+
+Wolf::Wolf(Wolf &s) {}

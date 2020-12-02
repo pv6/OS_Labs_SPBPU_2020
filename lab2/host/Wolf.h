@@ -15,14 +15,15 @@ public:
     static Wolf* GetInstance();
     void Start();
     void SetClientsCount(int num);
+private:
     Wolf &operator=(Wolf& s) {
         return s;
     }
-private:
     int _numOfClients = 0;
     std::vector<Host_conn*> _hostConnections;
     std::vector<Client_conn*> _clientsHandlers;
     Wolf();
+    Wolf(Wolf& s);
     void CreateConnection(Client_conn* handler);
     void SendAliveStatus(int msg);
     static void* RunClient(void* arg);

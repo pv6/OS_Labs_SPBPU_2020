@@ -22,16 +22,17 @@ public:
     pthread_t get_tid();
     int GetID();
     Conn GetConn();
-    Client_conn(Client_conn& c) = default;
-    Client_conn& operator=(Client_conn& c);
     ~Client_conn() {
         Terminate(EXIT_SUCCESS);
     }
 private:
+    Client_conn(Client_conn& c) = default;
+    Client_conn& operator=(Client_conn& c);
     int _clientId;
     int _clientPid;
     bool _isConnected;
     bool _isClosed;
+    bool _signTo;
     Host_conn* _hostConn;
     Conn _conn;
     sem_t* semaphore_host;

@@ -8,6 +8,7 @@
 #include <cstring>
 
 
+
 bool Host_conn::CreateConnect(int id)  {
     _isClosed = false;
     _signTo = false;
@@ -45,10 +46,6 @@ bool Host_conn::Write(void *buf, size_t size) {
     return true;
 }
 
-int Host_conn::get_client_id() {
-    return _idClient;
-}
-
 void Host_conn::SignTo() {
     this->_signTo = true;
 }
@@ -63,5 +60,14 @@ void Host_conn::SetStat(bool stat) {
 
 bool Host_conn::GetSat() {
     return _isAlive;
+}
+
+
+void Host_conn::SetReady(bool val){
+    this->_isClientReady = val;
+}
+
+bool Host_conn::IsClientReady() {
+    return _isClientReady;
 }
 

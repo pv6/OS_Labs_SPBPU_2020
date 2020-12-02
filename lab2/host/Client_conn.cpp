@@ -119,6 +119,7 @@ void Client_conn::Start() {
     int answ;
     while (true) {
         if (_hostConn->HasSign()) {
+            _hostConn->SetReady(false);
             GetAliveStat(stat);
             if (_conn.Write(&stat, sizeof(int))) {
                 sem_post(semaphore_client);
@@ -131,6 +132,7 @@ void Client_conn::Start() {
                     return;
                 } else {
                     if (_conn.Read(&answ, sizeof(int))) {
+                        _hostConn->SetReady(true);
                         _hostConn->Write(&answ, sizeof(int));
                     }
                 }
@@ -138,3 +140,4 @@ void Client_conn::Start() {
         }
     }
 }
+
