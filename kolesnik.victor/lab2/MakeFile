@@ -1,0 +1,15 @@
+CFLAGS = -std=c++14 -Wall -Werror
+PFLAGS = -lpthread -lrt
+HM_FILES = ./include/HostManager.h ./src/HostManager.cpp
+CM_FILES = ./include/ClientManager.h ./src/ClientManager.cpp
+CONNM_FILES = ./include/ConnectionManager.h ./src/ConnectionManager.cpp
+WF_FILES = ./include/WeatherForecaster.h ./src/WeatherForecaster.cpp
+UC_FILES = ./include/UserCommunion.h ./src/UserCommunion.cpp
+
+all:
+	g++ $(CFLAGS) $(HM_FILES) $(CM_FILES) $(CONNM_FILES) $(WF_FILES) $(UC_FILES) ./src/host.cpp ./include/Conn.h ./src/conn_fifo.cpp -o host_fifo $(PFLAGS) ;
+	g++ $(CFLAGS) $(HM_FILES) $(CM_FILES) $(CONNM_FILES) $(WF_FILES) $(UC_FILES) ./src/host.cpp ./include/Conn.h ./src/conn_sock.cpp -o host_sock $(PFLAGS) ;
+	g++ $(CFLAGS) $(HM_FILES) $(CM_FILES) $(CONNM_FILES) $(WF_FILES) $(UC_FILES) ./src/host.cpp ./include/Conn.h ./src/conn_pipe.cpp -o host_pipe $(PFLAGS) ;
+
+clean:
+	@rm -f host_*
