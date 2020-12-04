@@ -15,11 +15,11 @@ class Host
 public:
     void setupPredictorCount( size_t count );
     static Host & get();
+    void prepareSemaphore();
     void run( std::string const& date );
-    void softTerminate();
+    void terminate();
     ~Host();
 private:
-    void hardTerminate();
     struct ThreadData
     {
         std::string date;
@@ -34,8 +34,8 @@ private:
     Host( Host &  ) = delete;
     Host( Host && ) = delete;
 
-    Semaphore semHost;
-    Semaphore semClient;
+//    Semaphore semHost;
+//    Semaphore semPred;
 
     std::vector<pthread_t> predictorThr;
     std::set<__pid_t> predictorPid;

@@ -1,6 +1,7 @@
 #include <cstring>
 #include <random>
 #include <syslog.h>
+#include <stdexcept>
 #include <signal.h>
 #include "predictor.h"
 #include "conn.h"
@@ -56,20 +57,10 @@ bool Predictor::connectToHost()
         return false;
     }
 
-    std::string semNameClient = "predictor" + std::to_string(getpid());
-    try
-    {
-        semPred.create(semNameClient.c_str());
-        kill(hostPid, SIGUSR1);
-    }
-    catch (std::exception &)
-    {
-        syslog(LOG_ERR, "Predictor semaphores error: %s", strerror(errno));
-        return false;
-    }
+    kill(hostPid, SIGUSR1);
     syslog(LOG_INFO, "Connection %i is set", getpid());
 
-    return conn.open(getpid(), true);
+    return true;
 }
 
 void Predictor::predict()
@@ -85,10 +76,15 @@ void Predictor::predict()
             {
                 std::string semNameHost = "DK_forecast_host" + std::to_string(getpid());
                 semHost.open(semNameHost.c_str());
+
+                std::string semNameClient = "predictor" + std::to_string(getpid());
+                semPred.open(semNameClient.c_str());
+
                 isSemReady = true;
             } catch (...) {}
         }
 
+        conn.open(getpid(), true);
         while (run)
         {
             syslog(LOG_INFO, "Locked predictor pid %i", getpid());
@@ -107,6 +103,7 @@ void Predictor::predict()
             sprintf(ans, "%i", (number * (d + m + y)) % 70 - 30);
             conn.write(ans, 10);
             syslog(LOG_INFO, "Predictor %i successfully sent prediction %s", getpid(), ans);
+            syslog(LOG_INFO, "Semaphore value %i: %i", getpid(), semPred.getValue());
 
             semHost.increment();
         }

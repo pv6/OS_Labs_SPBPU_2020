@@ -16,11 +16,13 @@ public:
     void decrement();
     void timedDecrement();
     void increment();
+    int getValue();
     ~Semaphore();
+    // TODO to private
 private:
     void validate(const int rc, const std::string& caller) const;
+
     sem_t *sem = nullptr;
-    const char *name;
     const int timeoutSec = 5;
 };
 

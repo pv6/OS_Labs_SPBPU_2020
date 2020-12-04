@@ -18,9 +18,9 @@ bool Conn::open( int id, bool create ) {
 
     if (fd != -1)
     {
-        ftruncate(fd, msgmaxlen);
+        ftruncate(fd, msgmaxlen + 1);
         f_descr = static_cast<int*>(
-                    mmap(nullptr, static_cast<size_t>(msgmaxlen),
+                    mmap(nullptr, static_cast<size_t>(msgmaxlen + 1),
                          PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
         if (f_descr == MAP_FAILED)
         {

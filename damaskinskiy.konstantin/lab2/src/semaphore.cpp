@@ -7,8 +7,7 @@
 
 Semaphore::Semaphore() : sem(nullptr) {}
 
-Semaphore::Semaphore( std::string const& name ) :
-    name(name.c_str())
+Semaphore::Semaphore( std::string const& name )
 {
     open(name);
 }
@@ -44,7 +43,7 @@ void Semaphore::close()
 
 void Semaphore::create(const std::string &name)
 {
-    sem = sem_open(("/" + name).c_str(), O_CREAT | O_EXCL, 0666, 0);
+    sem = sem_open(("/" + name).c_str(), O_CREAT | O_EXCL, 0666, 1);
     if (sem == SEM_FAILED)
         validate(-1, "sem_open: create");
 }
@@ -90,4 +89,12 @@ void Semaphore::timedDecrement() {
 
 void Semaphore::increment() {
     sem_post(sem);
+}
+
+int Semaphore::getValue()
+{
+    int val;
+    if (sem_getvalue(sem, &val) != 0)
+        validate(-1, "getvalue");
+    return val;
 }

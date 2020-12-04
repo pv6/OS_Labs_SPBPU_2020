@@ -48,20 +48,14 @@ void Host::sigHandler( int signum, siginfo_t* info, void* ptr ) {
         break;
     }
     case SIGUSR2:
-        host.hardTerminate();
+        host.terminate();
         break;
     case SIGTERM:
-        host.softTerminate();
+        host.terminate();
         break;
     default:
         syslog(LOG_INFO, "Received signal: %s", strsignal(signum));
     }
-}
-
-void Host::hardTerminate()
-{
-    for (auto &p : predictorThr)
-        pthread_cancel(p);
 }
 
 Host::Host()
@@ -76,9 +70,10 @@ Host::~Host()
 {
 }
 
-void Host::softTerminate()
+void Host::terminate()
 {
-    hardTerminate();
+    for (auto &p : predictorThr)
+        pthread_cancel(p);
     for (auto &p : predictorPid)
         kill(p, SIGUSR2);
 }
@@ -93,22 +88,25 @@ void * Host::requestForecast( void *date_void )
 {
     ThreadData *datum = static_cast<ThreadData *>(date_void);
 
-    auto &host = Host::get();
-
     try
     {
         Conn conn;
         conn.open(datum->predictorPid, true);
-        //Host::get().semHost.timedDecrement();  // wait until host can write
         conn.write(
                     const_cast<void *>(reinterpret_cast<const void*>(datum->date.c_str())),
                     datum->date.length());
 
-        // get client semaphore
-        Semaphore semClient;
-        semClient.open("predictor" + std::to_string(datum->predictorPid));
-        semClient.increment();  // let client read & write
-        host.semHost.timedDecrement(); // wait until host can read
+        Semaphore semPred, semHost;
+
+        // get client and host semaphore
+        semPred.open("predictor" + std::to_string(datum->predictorPid));
+        semPred.increment();  // let client read & write
+        syslog(LOG_INFO, "Predictor %i allowed to work", datum->predictorPid);
+
+        auto semHostName = "DK_forecast_host" + std::to_string(datum->predictorPid);
+        semHost.open(semHostName);
+        syslog(LOG_INFO, "Host locked");
+        semHost.timedDecrement(); // wait until host can read
 
         char *answer = new char[11]{0};
         // get sizeof(int)
@@ -119,8 +117,9 @@ void * Host::requestForecast( void *date_void )
     }
     catch (std::exception &e)
     {
-        syslog(LOG_ERR, "Request forecast: exception caught: %s",
-               e.what());
+        auto &host = Host::get();
+        syslog(LOG_ERR, "Request forecast: exception caught: %s", e.what());
+        host.terminate();
         return nullptr;
     }
 }
@@ -130,53 +129,59 @@ Host & Host::get()
     return instance;
 }
 
-void Host::run( std::string const& date )
+void Host::prepareSemaphore()
 {
     // waiting for predictors attach
     while (connPredCount != estPredCount)
         ;
 
+    // prepare all client and host semaphores
+    for (auto &p : predictorPid)
+    {
+        Semaphore semPred, semHost;
+        auto semClientName = "predictor" + std::to_string(p);
+        auto semHostName = "DK_forecast_host" + std::to_string(p);
+
+        try
+        {
+            semPred.create(semClientName);
+            semHost.create(semHostName);
+        }
+        catch (std::exception &e)
+        {
+            syslog(LOG_ERR, "Client or host %i semaphore creation failed: %s", p, e.what());
+            terminate();
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void Host::run( std::string const& date )
+{
     // require predictions
     std::vector<char *> predictions(estPredCount);
     size_t idx = 0;
 
+    syslog(LOG_INFO, "Started thread creation");
     for (auto &p : predictorPid)
     {
-        auto semHostName = "DK_forecast_host" + std::to_string(p);
-
-        // open or create needed host semaphore
-        // for first date request -- creation.
-        // later -- just open.
-        try
-        {
-            semHost.tryOpen(semHostName);
-        }
-        catch (std::exception &e)
-        {
-            syslog(LOG_ERR, "Host semaphore creation failed: %s", e.what());
-            softTerminate();
-            exit(EXIT_FAILURE);
-        }
-
-        syslog(LOG_INFO, "Started thread creation");
         ThreadData *datum = new ThreadData;
         datum->date = date;
         datum->predictorPid = p;
-//        pthread_create(&predictorThr[idx++], nullptr, requestForecast,
-//                       static_cast<void *>(datum));
-         predictions[idx++] = static_cast<char*>(requestForecast(static_cast<void *>(datum)));
+        pthread_create(&predictorThr[idx++], nullptr, requestForecast,
+                       static_cast<void *>(datum));
     }
 
-//    // collect predictions
-//    idx = 0;
-//    for (auto &p : predictorThr)
-//    {
-//        void *pred;
-//        pthread_join(p, &pred);
-//        predictions[idx++] = static_cast<char *>(pred);
-//    }
+    // collect predictions
+    idx = 0;
+    for (auto &p : predictorThr)
+    {
+        void *pred;
+        pthread_join(p, &pred);
+        predictions[idx++] = static_cast<char *>(pred);
+    }
 
-    syslog(LOG_ERR, "All threads finished");
+    syslog(LOG_ERR, "All threads for date %s finished", date.c_str());
 
     // output predictions
     idx = 0;
@@ -222,12 +227,16 @@ int main( int argc, char *argv[] )
         dates.push_back(d);
     }
 
+    syslog(LOG_INFO, "Host initialization started...");
+
     /* Read predictors count */
     size_t clientCount = std::stoul(argv[2]);
 
     auto &host = Host::get();
+
     host.setupPredictorCount(clientCount);
 
+    host.prepareSemaphore();
     for (auto &date: dates)
     {
         /* Per date processing */
@@ -235,7 +244,7 @@ int main( int argc, char *argv[] )
         host.run(date);
     }
 
-    host.softTerminate();
+    host.terminate();
 
     return 0;
 }
