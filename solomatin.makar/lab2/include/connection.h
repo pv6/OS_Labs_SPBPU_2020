@@ -4,21 +4,18 @@
 #include <semaphore.h>
 
 class Connection {
-    int id, fd;
     bool hostConnection;
+    std::string filename;
 
-    Connection();
-    Connection &operator=(Connection &) = delete;
-    Connection(Connection &) = delete;
 public:
     sem_t *clientSemaphore, *serverSemaphore;
+    int id, fd, acceptFd;
     double lifetime = 0;
 
+    Connection(int id, bool create = false);
     ~Connection();
-
-    static Connection *connect(int id);
-    static Connection *create(int id);
 
     bool read(char *buffer, int len);
     bool write(char *buffer, int len);
+    bool accept(); // only for socket
 };

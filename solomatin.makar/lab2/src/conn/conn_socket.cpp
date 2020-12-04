@@ -6,123 +6,70 @@
 #include <string>
 #include "connection.h"
 #include "global_settings.h"
+#include "print_utils.h"
 
-Connection::Connection() : fd(-1) {
-}
+Connection::Connection(int id, bool create) : hostConnection(create), id(id), acceptFd(-1) {
+    filename = "/tmp/" + std::to_string(id) + ".sock";
 
-Connection *Connection::create(int id) {
-    std::string filename = "/tmp/" + std::to_string(id) + ".sock";
+    if (create && unlink(filename.c_str()) == 0) {
+        printOk("Deleted sock file: " + filename, id);
+    };
 
-    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (fd < 0) {
-        throw "Could not create socket";
-    }
+    fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) throw "Could not create socket";
 
     sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    unlink(filename.c_str());
     strcpy(addr.sun_path, filename.c_str());
 
-    if (bind(fd, (sockaddr *)&addr, sizeof(sockaddr_un)) < 0) {
-        throw "Could not bind stream socket";
+    if (hostConnection) {
+        printOk("Trying to bind " + filename, id);
+        if (bind(fd, (sockaddr *)&addr, sizeof(sockaddr_un)) < 0) {
+            perror("");
+            throw "Could not bind socket";
+        }
+        printOk("Socket bound " + filename, id);
+
+        printOk("Trying to start listening", id);
+        if (listen(fd, 10) < 0) {
+            perror("");
+            throw "Could not start listening";
+        }
+    } else {
+        if (connect(fd, (sockaddr *)&addr, sizeof(addr)) < 0) {
+            perror("");
+            throw "Could not connect to server";
+        }
     }
-    sem_t *clientSemaphore = sem_open((CLIENT_SEMAPHORE + std::to_string(id)).c_str(), O_CREAT | O_EXCL, 0666, 1);
-    sem_t *serverSemaphore = sem_open((SERVER_SEMAPHORE + std::to_string(id)).c_str(), O_CREAT | O_EXCL, 0666, 1);
-    if (clientSemaphore == SEM_FAILED || serverSemaphore == SEM_FAILED) {
-        throw "Could not open semaphore";
-    }
-
-    Connection *connection = new Connection();
-    connection->fd = fd;
-    connection->clientSemaphore = clientSemaphore;
-    connection->serverSemaphore = serverSemaphore;
-    connection->hostConnection = true;
-    connection->id = id;
-
-    return connection;
-}
-
-Connection *Connection::connect(int id) {
-    std::string filename = std::to_string(id) + ".sock";
-
-    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (fd < 0) {
-        throw "Could not bind stream socket";
-    }
-
-    sockaddr_un addr;
-    addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, filename.c_str());
-
-    if (::connect(fd, (sockaddr *)&addr, sizeof(sockaddr_un)) < 0) {
-        throw "Could not connect to stream socket";
-    }
-
-    sem_t *clientSemaphore = sem_open((CLIENT_SEMAPHORE + std::to_string(id)).c_str(), O_RDWR);
-    sem_t *serverSemaphore = sem_open((SERVER_SEMAPHORE + std::to_string(id)).c_str(), O_RDWR);
-    if (clientSemaphore == SEM_FAILED || serverSemaphore == SEM_FAILED) {
-        throw "Could not open semaphore";
-    }
-
-    Connection *connection = new Connection();
-    connection->fd = fd;
-    connection->id = id;
-    connection->clientSemaphore = clientSemaphore;
-    connection->serverSemaphore = serverSemaphore;
-    connection->hostConnection = false;
-
-    return connection;
 }
 
 Connection::~Connection() {
+    printOk("Closing connection..", id);
     close(fd);
-
-    sem_close(clientSemaphore);
-    sem_close(serverSemaphore);
-
-    if (hostConnection) {
-        sem_unlink((CLIENT_SEMAPHORE + std::to_string(id)).c_str());
-        sem_unlink((SERVER_SEMAPHORE + std::to_string(id)).c_str());
-    }
+    printOk("Connection closed", id);
 }
 
 bool Connection::write(char *buffer, int len) {
-    sem_t *semaphore = hostConnection ? serverSemaphore : clientSemaphore;
-
-    if (sem_wait(semaphore) < 0) {
-        throw "Could not lock semaphore";
+    if (hostConnection) {
+        if (acceptFd == -1) return false;
+        return ::write(acceptFd, buffer, len) >= 0;
     }
-    if (::write(fd, buffer, len) < 0) {
-        if (sem_post(semaphore) < 0) {
-            throw "Could not release semaphore";
-        }
+    return ::write(fd, buffer, len) >= 0;
+}
 
+bool Connection::read(char *buffer, int len) {
+    int readFd = hostConnection ? acceptFd : fd;
+    if (readFd == -1) return false;
+
+    if (::read(readFd, buffer, len) < 0) {
+        perror("read");
         return false;
-    }
-
-    if (sem_post(semaphore) < 0) {
-        throw "Could not release semaphore";
     }
     return true;
 }
 
-bool Connection::read(char *buffer, int len) {
-    sem_t *semaphore = hostConnection ? serverSemaphore : clientSemaphore;
-
-    if (sem_wait(semaphore) < 0) {
-        throw "Could not lock semaphore";
-    }
-    if (::read(fd, buffer, len) < 0) {
-        if (sem_post(semaphore) < 0) {
-            throw "Could not release semaphore";
-        }
-
-        return false;
-    }
-
-    if (sem_post(semaphore) < 0) {
-        throw "Could not release semaphore";
-    }
-    return true;
+bool Connection::accept() {
+    acceptFd = ::accept(fd, nullptr, nullptr);
+    return acceptFd >= 0;
 }

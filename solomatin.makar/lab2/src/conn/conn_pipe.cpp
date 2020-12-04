@@ -8,108 +8,46 @@
 #include <fcntl.h>
 #include "connection.h"
 #include "global_settings.h"
+#include "print_utils.h"
 
-Connection::Connection() : fd(-1) {
-}
-
-Connection *Connection::create(int id) {
-    std::string filename = "/tmp/" + std::to_string(id) + ".fifo";
-
-    if (mkfifo(filename.c_str(), 0777) < 0) {
-        throw ("Could not create fifo " + filename).c_str();
+Connection::Connection(int id, bool create) : hostConnection(create), id(id) {
+    filename = "/tmp/" + std::to_string(id) + ".fifo";
+    if (create) {
+        if (unlink(filename.c_str()) == 0) {
+            printOk("Deleted pipe " + filename, id);
+        }
+        if (mkfifo(filename.c_str(), 0666) < 0) {
+            throw ("Could not create fifo " + filename).c_str();
+        }
     }
-
-    int fd = open(filename.c_str(), O_RDWR);
-    if (fd < 0) {
+    if ((fd = open(filename.c_str(), O_RDWR)) < 0) {
         throw ("Could not open fifo " + filename).c_str();
     }
 
-    sem_t *clientSemaphore = sem_open((CLIENT_SEMAPHORE + std::to_string(id)).c_str(), O_CREAT | O_EXCL, 0666, 1);
-    sem_t *serverSemaphore = sem_open((SERVER_SEMAPHORE + std::to_string(id)).c_str(), O_CREAT | O_EXCL, 0666, 1);
-    if (clientSemaphore == SEM_FAILED || serverSemaphore == SEM_FAILED) {
-        throw "Could not open semaphore";
-    }
-
-    Connection *connection = new Connection();
-    connection->fd = fd;
-    connection->clientSemaphore = clientSemaphore;
-    connection->serverSemaphore = serverSemaphore;
-    connection->hostConnection = true;
-    connection->id = id;
-    return connection;
-}
-
-Connection *Connection::connect(int id) {
-    std::string filename = "/tmp/" + std::to_string(id) + ".fifo";
-
-    int fd = open(filename.c_str(), O_RDWR);
-    if (fd < 0) {
-        throw ("Could not open fifo " + filename).c_str();
-    }
-
-    sem_t *clientSemaphore = sem_open((CLIENT_SEMAPHORE + std::to_string(id)).c_str(), O_RDWR);
-    sem_t *serverSemaphore = sem_open((SERVER_SEMAPHORE + std::to_string(id)).c_str(), O_RDWR);
-    if (clientSemaphore == SEM_FAILED || serverSemaphore == SEM_FAILED) {
-        throw "Could not open semaphore";
-    }
-
-    Connection *connection = new Connection();
-    connection->fd = fd;
-    connection->clientSemaphore = clientSemaphore;
-    connection->serverSemaphore = serverSemaphore;
-    connection->hostConnection = false;
-    connection->id = id;
-    return connection;
+    if (hostConnection) printOk("Created pipe " + filename, id);
+    else printOk("Opened pipe " + filename, id);
 }
 
 bool Connection::write(char *buffer, int len) {
-    sem_t *semaphore = hostConnection ? serverSemaphore : clientSemaphore;
-
-    if (sem_wait(semaphore) < 0) {
-        throw "Could not lock semaphore";
-    }
     if (::write(fd, buffer, len) < 0) {
-        if (sem_post(semaphore) < 0) {
-            throw "Could not release semaphore";
-        }
-
+        perror("write");
         return false;
-    }
-
-    if (sem_post(semaphore) < 0) {
-        throw "Could not release semaphore";
     }
     return true;
 }
 
 bool Connection::read(char *buffer, int len) {
-    sem_t *semaphore = hostConnection ? serverSemaphore : clientSemaphore;
-
-    if (sem_wait(semaphore) < 0) {
-        throw "Could not lock semaphore";
-    }
     if (::read(fd, buffer, len) < 0) {
-        if (sem_post(semaphore) < 0) {
-            throw "Could not release semaphore";
-        }
-
+        perror("read");
         return false;
-    }
-
-    if (sem_post(semaphore) < 0) {
-        throw "Could not release semaphore";
     }
     return true;
 }
 
 Connection::~Connection() {
+    printOk("Closing connection..", id);
     close(fd);
-
-    sem_close(clientSemaphore);
-    sem_close(serverSemaphore);
-
-    if (hostConnection) {
-        sem_unlink((CLIENT_SEMAPHORE + std::to_string(id)).c_str());
-        sem_unlink((SERVER_SEMAPHORE + std::to_string(id)).c_str());
-    }
+    printOk("Connection closed", id);
 }
+
+bool Connection::accept() { return true; }

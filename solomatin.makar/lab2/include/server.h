@@ -10,25 +10,9 @@
 class Server {
     Date date;
 
-    pthread_mutex_t clientsMutex;
-    std::map<int, Connection *> clients;
-
     Server();
     Server(const Server &) = delete;
     Server &operator=(const Server &) = delete;
-    void removeConnection(int pid) {
-        pthread_mutex_lock(&clientsMutex);
-        if (clients.find(pid) != clients.end()) {
-            delete clients[pid];
-            clients.erase(pid);
-        }
-        pthread_mutex_unlock(&clientsMutex);
-    }
-    void addConnection(int pid, Connection *connection) {
-        pthread_mutex_lock(&clientsMutex);
-        clients[pid] = connection;
-        pthread_mutex_unlock(&clientsMutex);
-    }
 public:
     static Server &instance() {
         static Server server;
@@ -38,9 +22,8 @@ public:
     static void handleSignal(int signum, siginfo_t* info, void* ptr);
     static void *response(void *pid);
 
-    bool parseDate(int argc, char *argv[]);
+    void parse(int argc, char *argv[]);
     void start();
 
     int nextClient() { static int i; return i++; }
-    ~Server();
 };

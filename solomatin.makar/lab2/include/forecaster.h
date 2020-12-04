@@ -5,9 +5,8 @@
 #include "connection.h"
 
 class Forecaster {
-    int prediction;   // current prediciton on date
-    int hostPid = -1; // pid of host
-    Date date;        // date to forecast
+    int hostPid;
+    int id;
     Connection *connection = nullptr;
 
     Forecaster();
@@ -21,11 +20,9 @@ public:
         return instance;
     }
 
-    bool parseHostPid(int argc, char *argv[]);
-
-    bool handshake();
-    void readDate();
-    void sendPrediction();
+    void parse(int argc, char *argv[]);
+    void handshake();
+    void forecast();
 
     ~Forecaster();
 };

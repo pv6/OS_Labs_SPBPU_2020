@@ -1,31 +1,23 @@
 #include <iostream>
 #include <string.h>
 #include <set>
+#include <fcntl.h>
 #include <pthread.h>
 #include "server.h"
 #include "connection.h"
 #include "print_utils.h"
+#include "global_settings.h"
 
 Server::Server() : date{0,0,0} {
     struct sigaction act;
     act.sa_sigaction = handleSignal;
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGUSR1, &act, nullptr);
-
-    pthread_mutex_init(&clientsMutex, nullptr);
 }
 
 void Server::handleSignal(int signum, siginfo_t* info, void* ptr) {
-    Server &server = Server::instance();
     int pid = info->si_pid;
     printOk("Received SIGUSR1 from " + std::to_string(pid));
-
-    if (server.clients.find(pid) != server.clients.end()) {
-        printOk("Client with pid " + std::to_string(pid) + " sent signal but already exists");
-        return;
-    }
-
-    printOk("New client arrived with pid " + std::to_string(pid));
 
     pthread_t tid;
     pthread_attr_t attr;
@@ -35,59 +27,90 @@ void Server::handleSignal(int signum, siginfo_t* info, void* ptr) {
 
 void *Server::response(void *pidPointer) {
     Server &server = Server::instance();
-
     int pid = *(int *)pidPointer;
-
-    printOk("Entered thread function for pid " + std::to_string(pid));
-
     delete (int *)pidPointer;
     int id = server.nextClient();
 
+    printOk("Entered response function", id);
+
     try {
-    Connection *connection = Connection::create(id);
+        Connection connection = Connection(id, true);
+        printOk("Connection created", id);
 
-    printOk("Connection for pid " + std::to_string(pid) + " created", id);
+        std::string clientSemaphoreName = CLIENT_SEMAPHORE + std::to_string(id);
+        std::string serverSemaphoreName = SERVER_SEMAPHORE + std::to_string(id);
+        if (sem_unlink(clientSemaphoreName.c_str()) == 0) {
+            printOk("Semaphore " + clientSemaphoreName + " removed from system", id);
+        }
+        if (sem_unlink(serverSemaphoreName.c_str()) == 0) {
+            printOk("Semaphore " + serverSemaphoreName + " removed from system", id);
+        }
+        sem_t *clientSemaphore = sem_open(clientSemaphoreName.c_str(), O_CREAT | O_EXCL, 0666, 1);
+        sem_t *serverSemaphore = sem_open(serverSemaphoreName.c_str(), O_CREAT | O_EXCL, 0666, 1);
 
-    server.addConnection(pid, connection);
+        if (clientSemaphore == SEM_FAILED || serverSemaphore == SEM_FAILED) {
+            throw "Could not create semaphores";
+        }
+        printOk("Created semaphore " + clientSemaphoreName, id);
+        printOk("Created semaphore " + serverSemaphoreName, id);
 
-    // notify client that channel created
-    sem_wait(connection->clientSemaphore);
+        sem_wait(clientSemaphore);
+
         sigval sv;
         sv.sival_int = id;
         sigqueue(pid, SIGUSR1, sv);
         printOk("Sent signal back to " + std::to_string(pid) + " that channel created", id);
 
-        connection->write((char *)&server.date, sizeof(Date));
-    sem_post(connection->clientSemaphore);
+        connection.accept();
 
-    printOk("Waiting on server semaphore...", id);
-    sem_wait(connection->serverSemaphore);
-    int prediction;
-    connection->read((char *)&prediction, sizeof(prediction));
-    printOk("Client relesed semaphore, prediction read: " + std::to_string(prediction), id);
+        printOk("Writing date to channel...", id);
+        if (!connection.write((char *)&server.date, sizeof(server.date))) {
+            printErr("Could not write to channel, closing connection...");
+            sem_close(serverSemaphore);
+            sem_close(clientSemaphore);
+            sem_unlink(serverSemaphoreName.c_str());
+            sem_unlink(clientSemaphoreName.c_str());
+            return nullptr;
+        }
+        printInfo("Writed date: " + server.date.toString(), id);
 
-    server.removeConnection(pid);
-    printOk("Connection with id " + std::to_string(id) + " deleted", id);
+        sem_wait(serverSemaphore);
+        sem_post(clientSemaphore);
 
-    fflush(stdout);
+        int prediction;
+        printOk("Waiting when client post server semaphore...", id);
+        sem_wait(serverSemaphore);
+        printOk("Client released server semaphore!", id);
+        if (!connection.read((char *)&prediction, sizeof(prediction))) {
+            printErr("Could not read from channel, closing connection...");
+            sem_close(serverSemaphore);
+            sem_close(clientSemaphore);
+            sem_unlink(serverSemaphoreName.c_str());
+            sem_unlink(clientSemaphoreName.c_str());
+            return nullptr;
+        }
+        printInfo("Readed prediction: " + std::to_string(prediction) + "°C", id);
+        sem_post(serverSemaphore);
+
+        sem_close(serverSemaphore);
+        sem_close(clientSemaphore);
+        sem_unlink(serverSemaphoreName.c_str());
+        sem_unlink(clientSemaphoreName.c_str());
     } catch (const char *error) {
-        printErr("Error while processing client" + std::string(error), id);
+        perror("error");
+        printErr("Error while processing client: " + std::string(error), id);
     }
     return nullptr;
 }
 
-bool Server::parseDate(int argc, char *argv[]) {
+void Server::parse(int argc, char *argv[]) {
     static const char *help = "Usage: ./server [--date YEAR MONTH DAY]\n";
     if (argc == 1) {
         srand(time(0));
         date = {rand() % 10 + 2010, rand() % 12, rand() % 28};
     } else if (argc == 5 && !strcmp(argv[1], "--date")) {
         date = {atoi(argv[2]), atoi(argv[3]), atoi(argv[4])};
-    } else {
-        std::cout << help << std::endl;
-        return false;
-    }
-    return true;
+    } else throw help;
 }
 
 void Server::start() {
@@ -97,9 +120,4 @@ void Server::start() {
     while(true) {
         sleep(1000);
     }
-}
-
-Server::~Server() {
-    for (auto const &pair : clients) delete pair.second;
-    pthread_mutex_destroy(&clientsMutex);
 }
