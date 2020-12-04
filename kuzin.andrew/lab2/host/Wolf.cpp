@@ -24,7 +24,8 @@ Wolf::Wolf()
     sigaction(SIGUSR1, &sigAct, nullptr);
     sigaction(SIGUSR2, &sigAct, nullptr);
 
-    pthread_cond_init(&cond_, nullptr);
+    pthread_cond_init(&cond1_, nullptr);
+    pthread_cond_init(&cond2_, nullptr);
     pthread_mutex_init(&mutex_, nullptr);
 }
 
@@ -37,7 +38,8 @@ Wolf::~Wolf()
     delete[] attr_;
     delete[] clientInfo_;
 
-    pthread_cond_destroy(&cond_);
+    pthread_cond_destroy(&cond1_);
+    pthread_cond_destroy(&cond2_);
     pthread_mutex_destroy(&mutex_);
 }
 
@@ -106,32 +108,26 @@ void Wolf::startWork() {
         pthread_attr_init(&attr_[i]);
         pthread_create(&(threads_[i]), &attr_[i], threadRun, &clientInfo_[i]);
     }
-
     while (true) {
-        if (finishAmount_ == clientsAmount_) {
-            pthread_mutex_lock(&mutex_);
-            int res = 0;
-            for (int i = 0; i < clientsAmount_; ++i) {
-                if (clientInfo_[i].countStepsDead_ < 2)
-                    ++res;
-            }
+        pthread_mutex_lock(&mutex_);
+        getNumber();
+        step_++;
+        pthread_cond_broadcast(&cond1_);
+        while (finishAmount_ != clientsAmount_) {
+            pthread_cond_wait(&cond2_, &mutex_);
+        }
+        finishAmount_ = 0;
+        pthread_mutex_unlock(&mutex_);
 
-            if (res == 0) {
-                std::cout << std::endl << "GAME OVER - All goats are dead during 2 steps" << std::endl;
-                terminate(SIGINT);
-            }
+        int res = 0;
+        for (int i = 0; i < clientsAmount_; ++i) {
+            if (clientInfo_[i].countStepsDead_ < 2)
+                ++res;
+        }
 
-            std::cout.flush();
-            getNumber();
-            std::cout.flush();
-
-            finishAmount_ = 0;
-            step_++;
-
-            pthread_cond_broadcast(&cond_);
-            pthread_mutex_unlock(&mutex_);
-        } else {
-            sleep(1);
+        if (res == 0) {
+            std::cout << std::endl << "GAME OVER - All goats are dead during 2 steps" << std::endl;
+            terminate(SIGINT);
         }
     }
 }
@@ -219,13 +215,19 @@ void* Wolf::threadRun(void* data) {
     Message msg;
 
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
-    inst.finishAmount_++;
     while (true) {
         if (goatInfo->isAttached()) {
             pthread_mutex_lock(&inst.mutex_);
             while (clientStep >= inst.step_)
-                pthread_cond_wait(&inst.cond_, &inst.mutex_);
+                pthread_cond_wait(&inst.cond1_, &inst.mutex_);
             clientStep++;
+
+            ++inst.finishAmount_;
+
+            if (inst.finishAmount_ == inst.clientsAmount_) {
+                pthread_cond_signal(&inst.cond2_);
+            }
+            pthread_mutex_unlock(&inst.mutex_);
 
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_sec += TIMEOUT;
@@ -233,7 +235,6 @@ void* Wolf::threadRun(void* data) {
                 std::cout << "Time wait id: " << id << std::endl;
                 inst.terminate(SIGTERM);
             }
-
             if (connection.connReceive(&msg, sizeof(msg))) {
                 std::cout << "--------------- Goat id " << id << " -----------------" << std::endl;
                 std::cout << "Goat current status: " << ((msg.status_ == Status::ALIVE) ? "alive" : "dead") << std::endl;
@@ -244,11 +245,11 @@ void* Wolf::threadRun(void* data) {
                 std::cout << "Goat new status: " << ((msg.status_ == Status::ALIVE) ? "alive" : "dead") << std::endl;
 
                 connection.connSend(&msg, sizeof(msg));
+
             }
 
             sem_post(&semaphore_client);
-            ++inst.finishAmount_;
-            pthread_mutex_unlock(&inst.mutex_);
+
         } else
             pthread_exit(nullptr);
     }

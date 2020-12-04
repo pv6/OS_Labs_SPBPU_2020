@@ -47,7 +47,8 @@ private:
     std::atomic<int> finishAmount_;
     std::atomic<int> step_;
 
-    pthread_cond_t cond_;
+    pthread_cond_t cond1_;
+    pthread_cond_t cond2_;
     pthread_mutex_t mutex_;
 
     pthread_t* threads_;
