@@ -13,6 +13,9 @@ class Server {
     Server();
     Server(const Server &) = delete;
     Server &operator=(const Server &) = delete;
+
+    pthread_mutex_t nextClientMutex;
+    int nextClient;
 public:
     static Server &instance() {
         static Server server;
@@ -25,5 +28,7 @@ public:
     void parse(int argc, char *argv[]);
     void start();
 
-    int nextClient() { static int i; return i++; }
+    int getNextClient();
+
+    ~Server();
 };

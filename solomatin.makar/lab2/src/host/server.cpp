@@ -8,11 +8,13 @@
 #include "print_utils.h"
 #include "global_settings.h"
 
-Server::Server() : date{0,0,0} {
+Server::Server() : date{0,0,0}, nextClient(0) {
     struct sigaction act;
     act.sa_sigaction = handleSignal;
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGUSR1, &act, nullptr);
+
+    pthread_mutex_init(&nextClientMutex, nullptr);
 }
 
 void Server::handleSignal(int signum, siginfo_t* info, void* ptr) {
@@ -29,7 +31,7 @@ void *Server::response(void *pidPointer) {
     Server &server = Server::instance();
     int pid = *(int *)pidPointer;
     delete (int *)pidPointer;
-    int id = server.nextClient();
+    int id = server.getNextClient();
 
     printOk("Entered response function", id);
 
@@ -136,4 +138,17 @@ void Server::start() {
     while(true) {
         sleep(1000);
     }
+}
+
+int Server::getNextClient() {
+    int res;
+    pthread_mutex_lock(&nextClientMutex);
+        res = nextClient++;
+    pthread_mutex_unlock(&nextClientMutex);
+
+    return res;
+}
+
+Server::~Server() {
+    pthread_mutex_destroy(&nextClientMutex);
 }
