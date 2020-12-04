@@ -34,6 +34,13 @@ void *Server::response(void *pidPointer) {
     printOk("Entered response function", id);
 
     try {
+        timespec t;
+        if (clock_gettime(CLOCK_REALTIME, &t) == -1) {
+            perror("clock_gettime");
+            return nullptr;
+        }
+        t.tv_sec += TIMEOUT;
+
         Connection connection = Connection(id, true);
         printOk("Connection created", id);
 
@@ -54,7 +61,7 @@ void *Server::response(void *pidPointer) {
         printOk("Created semaphore " + clientSemaphoreName, id);
         printOk("Created semaphore " + serverSemaphoreName, id);
 
-        sem_wait(clientSemaphore);
+        sem_wait(clientSemaphore); // non-blocking wait
 
         sigval sv;
         sv.sival_int = id;
@@ -74,12 +81,21 @@ void *Server::response(void *pidPointer) {
         }
         printInfo("Writed date: " + server.date.toString(), id);
 
-        sem_wait(serverSemaphore);
+        sem_wait(serverSemaphore); // non-blocking wait
         sem_post(clientSemaphore);
 
         int prediction;
         printOk("Waiting when client post server semaphore...", id);
-        sem_wait(serverSemaphore);
+        while (sem_timedwait(serverSemaphore, &t) < 0) { // blocking wait
+            if (errno == EINTR) continue;
+
+            perror("sem_timedwait");
+            sem_close(serverSemaphore);
+            sem_close(clientSemaphore);
+            sem_unlink(serverSemaphoreName.c_str());
+            sem_unlink(clientSemaphoreName.c_str());
+            return nullptr;
+        }
         printOk("Client released server semaphore!", id);
         if (!connection.read((char *)&prediction, sizeof(prediction))) {
             printErr("Could not read from channel, closing connection...");

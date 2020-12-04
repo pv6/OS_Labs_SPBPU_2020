@@ -68,6 +68,13 @@ void Forecaster::forecast() {
     if (connection == nullptr) {
         return;
     }
+    timespec t;
+    if (clock_gettime(CLOCK_REALTIME, &t) == -1) {
+        perror("clock_gettime");
+        return;
+    }
+    t.tv_sec += TIMEOUT;
+
     std::string clientSemName = CLIENT_SEMAPHORE + std::to_string(id);
     std::string serverSemName = SERVER_SEMAPHORE + std::to_string(id);
     sem_t *clientSem = sem_open(clientSemName.c_str(), O_RDWR);
@@ -80,9 +87,19 @@ void Forecaster::forecast() {
 
     Date date;
     printOk("Wating when server release client semaphore...", id);
-    sem_wait(clientSem);
+    while (sem_timedwait(clientSem, &t) < 0) { // blocking wait
+        if (errno == EINTR) continue;
+
+        perror("sem_timedwait");
+        sem_close(serverSem);
+        sem_close(clientSem);
+
+        throw "Error on waiting semaphore";
+    }
     printOk("Server released client semaphore!", id);
     if (!connection->read((char *)&date, sizeof(date))) {
+        sem_close(clientSem);
+        sem_close(serverSem);
         throw "Could not read date";
     }
     printInfo("Date read: " + date.toString(), id);
@@ -90,6 +107,8 @@ void Forecaster::forecast() {
     srand(getpid() + date.Day + date.Month + date.Year);
     int prediction = -40 + rand() % 80;
     if (!connection->write((char *)&prediction, sizeof(prediction))) {
+        sem_close(clientSem);
+        sem_close(serverSem);
         throw "Could not write prediction";
     };
     printInfo("Writed prediction: " + std::to_string(prediction) + "°C", id);
