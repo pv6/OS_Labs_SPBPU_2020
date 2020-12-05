@@ -221,13 +221,8 @@ void* Wolf::threadRun(void* data) {
             while (clientStep >= inst.step_)
                 pthread_cond_wait(&inst.cond1_, &inst.mutex_);
             clientStep++;
-
-            ++inst.finishAmount_;
-
-            if (inst.finishAmount_ == inst.clientsAmount_) {
-                pthread_cond_signal(&inst.cond2_);
-            }
             pthread_mutex_unlock(&inst.mutex_);
+
 
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_sec += TIMEOUT;
@@ -235,6 +230,7 @@ void* Wolf::threadRun(void* data) {
                 std::cout << "Time wait id: " << id << std::endl;
                 inst.terminate(SIGTERM);
             }
+            
             if (connection.connReceive(&msg, sizeof(msg))) {
                 std::cout << "--------------- Goat id " << id << " -----------------" << std::endl;
                 std::cout << "Goat current status: " << ((msg.status_ == Status::ALIVE) ? "alive" : "dead") << std::endl;
@@ -250,6 +246,13 @@ void* Wolf::threadRun(void* data) {
 
             sem_post(&semaphore_client);
 
+            pthread_mutex_lock(&inst.mutex_);
+            ++inst.finishAmount_;
+            pthread_mutex_unlock(&inst.mutex_);
+
+            if (inst.finishAmount_ == inst.clientsAmount_) {
+                pthread_cond_signal(&inst.cond2_);
+            }
         } else
             pthread_exit(nullptr);
     }
