@@ -232,9 +232,11 @@ void* Wolf::threadRun(void* data) {
             }
             
             if (connection.connReceive(&msg, sizeof(msg))) {
+                pthread_mutex_lock(&inst.mutex_);
                 std::cout << "--------------- Goat id " << id << " -----------------" << std::endl;
                 std::cout << "Goat current status: " << ((msg.status_ == Status::ALIVE) ? "alive" : "dead") << std::endl;
                 std::cout << "Goat number: " << msg.number_ << std::endl;
+                pthread_mutex_unlock(&inst.mutex_);
 
                 msg = inst.step(msg, *goatInfo);
 
