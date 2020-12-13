@@ -1,0 +1,10 @@
+CFLAGS = -std=c++14 -Wall -Werror
+PFLAGS = -lpthread -lrt
+H_FILES = ./include/*
+C_FILES = ./src/*
+
+all:
+	g++ $(CFLAGS) $(H_FILES) $(C_FILES) -o tests $(PFLAGS)
+
+clean:
+	@rm -f tests
